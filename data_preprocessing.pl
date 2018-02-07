@@ -1,17 +1,20 @@
 #! /usr/bin/perl
 # Shebang line, this is the path to the perl binary
 
-
 use strict; # Forces correct coding practises like declaring variables
 
-#Catches and explains errors
+# Catches and explains errors
 use warnings;
 use diagnostics;
+no warnings "experimental::autoderef";
 
 use RNA;
 use Text::CSV_XS;
 use Getopt::Long;
 use Text::CSV::Slurp;
+use Try::Tiny;
+use Log::Log4perl qw( :easy );
+Log::Log4perl->easy_init( $INFO );
 
 # This script is to prepare the dataset for the neural network. Andrew suggested other features that they don't currently record such as number of a specific nucleotide and g-c content. This code will take the sequence from each observation to get the features required.
 
@@ -26,31 +29,55 @@ my $raw_data = 'Example_summary.csv';
 # To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'outfile' flag 
 my $new_file =  'Neural_network_' . $raw_data;
 
-my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
-my @dataset;
-
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 GetOptions(
 	'file=s' => \$raw_data,
 	'outfile=s'=> \$new_file
 );
 
+my $i = 0;
+
+INFO "Creating data from $raw_data into file $new_file";
+
+#Checks if file already exists
+LABEL: if (-e $new_file) {
+    print "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
+	my $input = <STDIN>;	
+	chomp $input;
+		if ($input =~ /^n$/i) {
+			die ERROR "The file '$new_file' exists, rename your output file using --outfile <filename>";
+		} elsif ($input !~ /^y$/i) {
+			$i++;
+			if ($i == 3) { 
+				ERROR print "Too many failed attempts\n";
+				exit(0);
+			}
+			goto LABEL;
+		}
+}
+
+my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
+my @dataset;
+
 open (my $data, '<', $raw_data) or die "Could not find or open '$raw_data'\n";
 
 # Arrayref of column names 
 my $headers = $csv->getline($data);
 
-# Using qw instead of "" as the latter appears in the csv and quotes are another common separated value 
-my $new_features = [q(a_count),qq/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/ttt_count/,q/minimum_free_energy_prediction/];
+# Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
+my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/ttt_count/,q/minimum_free_energy_prediction/];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
 my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}, @{$headers}[7,8] );
 $csv->column_names( @{ $headers} );
 	
-	while (my $observation = $csv->getline_hr($data)) {	
-#	if ($csv->parse($observation)){
+while (my $observation = $csv->getline_hr($data)) {	
+	if (scalar keys $observation == 9){
 		my $sequence = $observation->{'Aligned_Sequence'};
    		my @features = variables($sequence);
+
+		#my $output = ($observation->{'n_deleted'}*-1) + $observation->{'n_inserted'};
+		#print " Number of changes to aligned sequence \n$output\n";
 
 		my $results = {
 
@@ -73,56 +100,27 @@ $csv->column_names( @{ $headers} );
 
 		};
 
-push (@dataset, $results);
+		push (@dataset, $results);
 		
-#	} else {
-		
-#		warn "Line could not be parsed: $observation\nPlease amend CSV";
-
-#	}
-}
-
-# Putting the dataset in at once instead of adding in row by row to avoid memory like by having the file open for as little as necessary
- 
-open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
-my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
-print $out $slurp;
-
-close $data;
-close $out;
-
-=pod
-OUTER: while (my $observation = <$data>){
-
-	chomp $observation;
-
-	if ($csv->parse($observation)){
-
-		my @columns = $csv->fields();
-		if ($columns[0] eq 'Aligned_Sequence'){
-			my @column_names = @columns;
-			next OUTER;
-		}
-		my $sequence = $columns[0];
-		my @features = variables($sequence);
-		
-#At this point @features should contain the new features that need to be added to the dataset, the sequence itself isn't needed for the neural network
-
-		my @data_set = (@columns[1,2,3,4,5,6],@features,@columns[7,8]);
-		print "\n\n@data_set\n\n";
-
-#ISSUE - @features should be before the last (output) column. The neural network can still work but to match convension the output should be the last column. Probably a much neater way to do it, [1-6] & [1:6] did not work 
-#FIX - In perl use [1..6]
-
 	} else {
 		
-		warn "Line could not be parsed: $observation\nPlease amend CSV";
+		die "Your CSV does not match intended format: $headers\nPlease amend CSV";
 
 	}
-
-
 }
-=cut
+
+close $data;
+
+# Putting the dataset in at once instead of adding in row by row to avoid memory leak by having the file open for as little as necessary
+ 
+open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
+try {
+	my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
+	print $out $slurp;
+} catch {
+	warn "Caught error: $_";
+};
+close $out;
 
 sub variables {
 	my $sequence = shift;
@@ -135,8 +133,8 @@ sub variables {
 #  G-C Content : 18
 #  TTT Content : 1
 #  Minimum free energy prediction: -91.5
-
-	print "\n\nSequence:\n$sequence\n\n";
+	
+	print "Sequence:\n$sequence\n\n";
 
 # Nucleotide count
 
