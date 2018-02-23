@@ -31,24 +31,24 @@ my $new_file =  'Neural_network_' . $raw_data;
 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 GetOptions(
-	'file=s' => \$raw_data,
-	'outfile=s'=> \$new_file
+	'samples=s' => \$raw_data,
+	'output=s'=> \$new_file
 );
 
-my $i = 0;
+my $exit = 0;
 
-INFO "Creating data from $raw_data into file $new_file";
+INFO "Creating data from '$raw_data' into file '$new_file'";
 
-#Checks if file already exists
+# Checks if file already exists
 LABEL: if (-e $new_file) {
     print "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
 	my $input = <STDIN>;	
 	chomp $input;
 		if ($input =~ /^n$/i) {
-			die ERROR "The file '$new_file' exists, rename your output file using --outfile <filename>";
+			die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
 		} elsif ($input !~ /^y$/i) {
-			$i++;
-			if ($i == 3) { 
+			$exit++;
+			if ($exit == 3) { 
 				ERROR print "Too many failed attempts\n";
 				exit(0);
 			}
@@ -65,10 +65,10 @@ open (my $data, '<', $raw_data) or die "Could not find or open '$raw_data'\n";
 my $headers = $csv->getline($data);
 
 # Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
-my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/ttt_count/,q/minimum_free_energy_prediction/];
+my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/ttt_count/,q/minimum_free_energy_prediction/,q/ins_dels/];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}, @{$headers}[7,8] );
+my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..6], @{$headers}[7,8], @{$new_features}[7] );
 $csv->column_names( @{ $headers} );
 	
 while (my $observation = $csv->getline_hr($data)) {	
@@ -76,8 +76,9 @@ while (my $observation = $csv->getline_hr($data)) {
 		my $sequence = $observation->{'Aligned_Sequence'};
    		my @features = variables($sequence);
 
-		#my $output = ($observation->{'n_deleted'}*-1) + $observation->{'n_inserted'};
-		#print " Number of changes to aligned sequence \n$output\n";
+		#output column
+		my $output = ($observation->{'n_deleted'}*-1) + $observation->{'n_inserted'};
+		print "\nNumber of changes to aligned sequence \n$output\n";
 
 		my $results = {
 
@@ -97,6 +98,7 @@ while (my $observation = $csv->getline_hr($data)) {
 			@{$new_features}[6] => $features[6],
 			'#Reads' => $observation->{'#Reads'},
 			'%Reads' => $observation->{'%Reads'},
+			ins_dels => $output,
 
 		};
 
