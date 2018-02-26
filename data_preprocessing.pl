@@ -36,8 +36,7 @@ GetOptions(
 );
 
 my $exit = 0;
-
-INFO "Creating data from '$raw_data' into file '$new_file'";
+my $total = 0;
 
 # Checks if file already exists
 LABEL: if (-e $new_file) {
@@ -55,6 +54,8 @@ LABEL: if (-e $new_file) {
 			goto LABEL;
 		}
 }
+
+INFO "Creating data from '$raw_data' into file '$new_file'";
 
 my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
 my @dataset;
@@ -124,9 +125,13 @@ try {
 };
 close $out;
 
+#Log file
+INFO "Number of records processed without error : $total";
+INFO "Number of bad records : ";
+
 sub variables {
 	my $sequence = shift;
-
+	$total++;
 # Output: Several features derived from the sequence 
 #  A : 65 
 #  C : 65 
