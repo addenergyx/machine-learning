@@ -34,7 +34,7 @@ X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
 
 #Spliting dataset into training and test set
 from sklearn.model_selection import train_test_split
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3)
 #A good number for random state is 42
 
 #Feature scaling -1 to +1 because there will be alot of parallel computations
@@ -66,7 +66,7 @@ from keras.layers import Dense
 from keras.layers import Dropout
 
 #K-fold cross valdation, reduces variance and bias
-from keras.wrappers.scikit_learn import KerasRegressor 
+from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import cross_val_score
 
 #Currently using tensorflow backend
@@ -77,37 +77,55 @@ def build_regressor():
     #Initialising neural network
     regressor = Sequential()
     #Input layer and first hidden layer with dropout
-    regressor.add(Dense(units=8, kernel_initializer='uniform',activation='relu',input_dim=13))
+    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=13))
     """General tip for the number of nodes in the input layer is that it should be the
     average of the number of nodes in the input and output layer. However this may
     be changed later when parameter tuning using cross validation"""
-    regressor.add(Dropout(rate=0.1))
+    #regressor.add(Dropout(rate=0.1))
     #Hidden layer 2 with dropout
-    regressor.add(Dense(units=8, kernel_initializer='uniform', activation='relu'))
+    regressor.add(Dense(units=6, kernel_initializer='uniform', activation='relu'))
     """Rectifer function is good for hidden layers and sigmoid function good for output
     layers. Uniform initialises the weights randomly to small numbers close to 0"""
-    regressor.add(Dropout(rate=0.1))
+    #regressor.add(Dropout(rate=0.1))
     #Output layer, Densely-connected NN layer
     regressor.add(Dense(units=1, kernel_initializer='uniform'))
-    #Keras does not have root mean squared error  so had to create a custom loss
+    #Keras does not have root mean squared error so had to create a custom loss
     #to match Amazon's ML model loss function
     """Custom metrics can be passed at the compilation step. 
     The function would need to take (y_true, y_pred) as arguments and return a single tensor value."""
     def root_mean_squared_error(y_true, y_pred):
         return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
     #Gradient Descent    
-    regressor.compile(optimizer='adam', loss=root_mean_squared_error, metrics=[root_mean_squared_error])
+    regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
     return regressor
 
-estimator = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
+model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
 #Accuracy is the 10 accuracies returned by k-fold cross validation
 #Most of the time k=10
-results = cross_val_score(estimator=estimator, X = X_train, y = Y_train, cv=10, n_jobs=-1)
+
+accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=10, n_jobs=1)
 #n_jobs is number of cpu's, -1 is all
 
+#Have to fit data to model again
+model.fit(X_train, Y_train)
+
+plt.plot(model.history['root_mean_squared_error'])
+plt.show()
+
+#Prediction on test data
+y_pred = model.predict(X_test)
+
 #Mean accuracies and variance
-mean = results.mean()
-variance = results.std()
+mean = accuracy.mean()
+variance = accuracy.std()
+
+plt.plot(Y_test)
+plt.show()
+
+#graph comparing predicted and actual results
+plt.plot(Y_test)
+plt.plot(y_pred)
+plt.show()
 
 #plt.plot(results.history['root_mean_squared_error'])
 #plt.show()
