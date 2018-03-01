@@ -1,3 +1,20 @@
+
+#Command-Line Option and Argument Parsing
+import argparse
+parser = argparse.ArgumentParser(prog='Deletion Spread Neural Network', 
+                                 description='This is a program to predict insertions and deletions on a sequence based on given data')
+
+parser.add_argument('--cpu', action="store", type=int, default=-1,
+                    help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
+parser.add_argument('--sample', action='store', default='Neural_network_Example_summary.csv',
+                    help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
+
+#Later will need to add arguments for user to predict data
+
+args = parser.parse_args()
+n_cpu = args.cpu
+sample = args.sample
+
 #Neural Network
 
 #Preparing data
@@ -5,9 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
 #Importing dataset
-dataset = pd.read_csv('Neural_network_Example_summary.csv')
+dataset = pd.read_csv(sample)
 dataset = dataset.drop(dataset.columns[4:6], axis=1)
 
 #Input layer
@@ -95,21 +111,36 @@ def build_regressor():
     The function would need to take (y_true, y_pred) as arguments and return a single tensor value."""
     def root_mean_squared_error(y_true, y_pred):
         return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
-    #Gradient Descent    
-    regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
+    #Complie model - Gradient Descent    
+    regressor.compile(optimizer='adam', loss=root_mean_squared_error, metrics=[root_mean_squared_error])
     return regressor
 
 model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
 #Accuracy is the 10 accuracies returned by k-fold cross validation
 #Most of the time k=10
 
-accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=10, n_jobs=1)
+#from sklearn.model_selection import StratifiedKFold
+#kfold = StratifiedKFold(n_splits=10, shuffle=True)
+
+accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=10, n_jobs=n_cpu)
 #n_jobs is number of cpu's, -1 is all
 
-#Have to fit data to model again
-model.fit(X_train, Y_train)
+from keras.callbacks import History 
+history = History()
 
-plt.plot(model.history['root_mean_squared_error'])
+#Have to fit data to model again after cross validation
+history = model.fit(X_train, Y_train, callbacks=[history])
+
+print(history.history.keys())
+
+plt.title('Model accuracy (RMSE)')
+plt.plot(history.history['root_mean_squared_error'])
+#plt.plot(history.history['val_root_mean_squared_error'])
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.show()
+
+plt.plot(history.history['loss'])
 plt.show()
 
 #Prediction on test data
@@ -123,11 +154,11 @@ plt.plot(Y_test)
 plt.show()
 
 #graph comparing predicted and actual results
+plt.title('Acutal results vs Predicted results')
 plt.plot(Y_test)
 plt.plot(y_pred)
+plt.legend(['Actual', 'Predicted'], loc='best')
 plt.show()
 
-#plt.plot(results.history['root_mean_squared_error'])
-#plt.show()
 
 
