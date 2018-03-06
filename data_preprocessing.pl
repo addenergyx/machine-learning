@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#! /usr/bin/perl 
 # Shebang line, this is the path to the perl binary
 
 use strict; # Forces correct coding practises like declaring variables
@@ -66,12 +66,12 @@ open (my $data, '<', $raw_data) or die "Could not find or open '$raw_data'\n";
 my $headers = $csv->getline($data);
 
 # Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
-my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/ttt_count/,q/minimum_free_energy_prediction/,q/ins_dels/];
+my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/ins_dels/];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..6], @{$headers}[7,8], @{$new_features}[7] );
+my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..7], @{$headers}[7,8], @{$new_features}[8] );
 $csv->column_names( @{ $headers} );
-	
+
 while (my $observation = $csv->getline_hr($data)) {	
 	if (scalar keys $observation == 9){
 		my $sequence = $observation->{'Aligned_Sequence'};
@@ -97,6 +97,7 @@ while (my $observation = $csv->getline_hr($data)) {
 			@{$new_features}[4] => $features[4],
 			@{$new_features}[5] => $features[5],
 			@{$new_features}[6] => $features[6],
+			@{$new_features}[7] => $features[7],
 			'#Reads' => $observation->{'#Reads'},
 			'%Reads' => $observation->{'%Reads'},
 			ins_dels => $output,
@@ -107,7 +108,7 @@ while (my $observation = $csv->getline_hr($data)) {
 		
 	} else {
 		
-		die "Your CSV does not match intended format: $headers\nPlease amend CSV";
+		die "Your CSV does not match intended format Please amend CSV";
 
 	}
 }
@@ -126,8 +127,8 @@ try {
 close $out;
 
 #Log file
-INFO "Number of records processed without error : $total";
-INFO "Number of bad records : ";
+#INFO "Number of records processed : $total";
+#INFO "Number of bad records : ";
 
 sub variables {
 	my $sequence = shift;
@@ -158,6 +159,9 @@ sub variables {
 	my $gc_content = () = $sequence =~ /gc/ig;
 	print "G-C Content : $gc_content\n"; 
 
+# TGA is the stop codon, the ribosome would stop translation at this point
+	my $tga_count = () = $sequence =~ /tga/ig;
+
 # 3 or more T bases in a row can pervent polymerase from working properlly and therefore it can drop off
 	my $triple_t_count = () = $sequence =~ /ttt/ig;
 	print "TTT Content : $triple_t_count\n"; 
@@ -167,7 +171,7 @@ sub variables {
 	my ($structure, $mfe) = RNA::fold($sequence);
 	print "Minimum free energy prediction: $mfe\n\n";
 
-	my @features = ($a_count, $c_count, $t_count, $g_count, $gc_content, $triple_t_count, $mfe);
+	my @features = ($a_count, $c_count, $t_count, $g_count, $gc_content, $tga_count, $triple_t_count, $mfe);
 	print join ("\n", @features);
 	
 	return @features;
