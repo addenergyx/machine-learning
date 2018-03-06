@@ -4,7 +4,7 @@ import argparse
 parser = argparse.ArgumentParser(prog='Deletion Spread Neural Network', 
                                  description='This is a program to predict insertions and deletions on a sequence based on given data')
 
-parser.add_argument('--cpu', action="store", type=int, default=-1,
+parser.add_argument('--cpu', action="store", type=int, default=1,
                     help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
 parser.add_argument('--sample', action='store', default='Neural_network_Example_summary.csv',
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
@@ -21,15 +21,16 @@ sample = args.sample
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from time import strftime
 
 #Importing dataset
 dataset = pd.read_csv(sample)
-dataset = dataset.drop(dataset.columns[4:6], axis=1)
+dataset = dataset.drop(dataset.columns[3:6], axis=1)
 
 #Input layer
-X = dataset.iloc[: , 1:14].values
+X = dataset.iloc[: , 1:13].values
 #Output layer
-Y = dataset.iloc[: , 14:15].values
+Y = dataset.iloc[: , 13:14].values
 
 #Encoding categorical data
 from sklearn.preprocessing import LabelEncoder
@@ -44,13 +45,14 @@ X[:,0] = labelencoder_nhej.fit_transform(X[:,0])
 labelencoder_unmodified = LabelEncoder()
 X[:,1] = labelencoder_unmodified.fit_transform(X[:,1])
 
+#All results are false in this sample so don't need this feature
 #Encoding HDR
-labelencoder_hdr = LabelEncoder()
-X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
+#labelencoder_hdr = LabelEncoder()
+#X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
 
 #Spliting dataset into training and test set
 from sklearn.model_selection import train_test_split
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=0)
 #A good number for random state is 42
 
 #Feature scaling -1 to +1 because there will be alot of parallel computations
@@ -61,7 +63,7 @@ sc = StandardScaler()
 #Must fit object to training set then transform it
 X_train = sc.fit_transform(X_train)
 
-#Scaled on same basis as X_train because of sc
+#Scaled on same basis as X_train because of sc, however not influenced by training data range 
 X_test = sc.transform(X_test)
 
 """Algorithm will converge much faster with feature scalling
@@ -84,6 +86,7 @@ from keras.layers import Dropout
 #K-fold cross valdation, reduces variance and bias
 from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import explained_variance_score, mean_squared_error 
 
 #Currently using tensorflow backend
 from keras import backend as k
@@ -93,7 +96,7 @@ def build_regressor():
     #Initialising neural network
     regressor = Sequential()
     #Input layer and first hidden layer with dropout
-    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=13))
+    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=12))
     """General tip for the number of nodes in the input layer is that it should be the
     average of the number of nodes in the input and output layer. However this may
     be changed later when parameter tuning using cross validation"""
@@ -111,27 +114,38 @@ def build_regressor():
     The function would need to take (y_true, y_pred) as arguments and return a single tensor value."""
     def root_mean_squared_error(y_true, y_pred):
         return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
-    #Complie model - Gradient Descent    
-    regressor.compile(optimizer='adam', loss=root_mean_squared_error, metrics=[root_mean_squared_error])
+    #Complie model    
+    regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
     return regressor
 
 model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
 #Accuracy is the 10 accuracies returned by k-fold cross validation
 #Most of the time k=10
 
-#from sklearn.model_selection import StratifiedKFold
-#kfold = StratifiedKFold(n_splits=10, shuffle=True)
+from sklearn.model_selection import KFold
+kfold = KFold(n_splits=10, shuffle=True)
 
-accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=10, n_jobs=n_cpu)
+accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu)
 #n_jobs is number of cpu's, -1 is all
 
-from keras.callbacks import History 
+#Mean accuracies and variance
+loss_mean = accuracy.mean()
+loss_variance = accuracy.std()
+
+date = strftime("%d-%m-%y")
+
+from keras.callbacks import History, TensorBoard, TerminateOnNaN 
 history = History()
+tensorboard = TensorBoard(log_dir='./logs/tensorboard/' + date, histogram_freq=0, write_graph=True, 
+                          write_images=True)
+
+#Model stops if loss function is nan                          
+terminate_on_nan = TerminateOnNaN()
 
 #Have to fit data to model again after cross validation
-history = model.fit(X_train, Y_train, callbacks=[history])
+history = model.fit(X_train, Y_train, callbacks=[history, tensorboard, terminate_on_nan])
 
-print(history.history.keys())
+#print(history.history.keys())
 
 plt.title('Model accuracy (RMSE)')
 plt.plot(history.history['root_mean_squared_error'])
@@ -140,16 +154,15 @@ plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.show()
 
-plt.plot(history.history['loss'])
-plt.show()
+#plt.plot(history.history['loss'])
+#plt.show()
 
-#Prediction on test data
-y_pred = model.predict(X_test)
+#Prediction on test data, needed to reshape array to subtract element wise
+y_pred = model.predict(X_test).reshape(-1,1)
+y_difference = np.subtract(Y_test, y_pred)
 
-#Mean accuracies and variance
-mean = accuracy.mean()
-variance = accuracy.std()
-
+#True results
+plt.title('Actual Results')
 plt.plot(Y_test)
 plt.show()
 
@@ -160,5 +173,14 @@ plt.plot(y_pred)
 plt.legend(['Actual', 'Predicted'], loc='best')
 plt.show()
 
+plt.title('Predicted results vs Actual results')
+plt.plot(y_difference)
+plt.show()
+
+from math import sqrt
+
+#Results variance and mean, Best possible score is 1.0, lower values are worse
+variance = explained_variance_score(Y_test, y_pred)
+rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 
 
