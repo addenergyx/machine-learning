@@ -6,7 +6,6 @@ use strict; # Forces correct coding practises like declaring variables
 # Catches and explains errors
 use warnings;
 use diagnostics;
-no warnings "experimental::autoderef";
 
 use RNA;
 use Text::CSV_XS;
@@ -24,16 +23,16 @@ Log::Log4perl->easy_init( $INFO );
 
 #   -GGTTCCAGAACCGGAGGACAAAGTACAAACGGCAGAAGCTGGAGGAGGAAGGGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAACCGGTGGCGCATTGCCACGAAGCAGGCCAATGGGGAGGACATCGATGTCACCTCCAATGACTAGGGTGGGCAACCACAAACCCACGAGGGCAGAGTGCTGCTTGCTGCTGGCCAGGCCCCTGCGTGGGCCCAAGCTGGACTCTGGCCACTCCCTGGCCAGGCTTTGGGGAGGCCTGGAGTCATG	False	True	False	0	0	0	1684	34.9885726158
 
-my $raw_data = 'Example_summary.csv';
-
-# To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'outfile' flag 
-my $new_file =  'Neural_network_' . $raw_data;
+my $raw_data = 'Example_summary.csv'; 
 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 GetOptions(
-	'samples=s' => \$raw_data,
-	'output=s'=> \$new_file
+	'sample=s' => \$raw_data,
+	'output=s'=> \my $new_file,
 );
+
+# To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'output' flag
+$new_file = 'Neural_network_' . $raw_data;
 
 my $exit = 0;
 my $total = 0;
@@ -73,7 +72,7 @@ my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0
 $csv->column_names( @{ $headers} );
 
 while (my $observation = $csv->getline_hr($data)) {	
-	if (scalar keys $observation == 9){
+	if (scalar keys %{$observation} == 9){
 		my $sequence = $observation->{'Aligned_Sequence'};
    		my @features = variables($sequence);
 
