@@ -6,14 +6,20 @@ parser = argparse.ArgumentParser(prog='Deletion Spread Neural Network',
 
 parser.add_argument('--cpu', action="store", type=int, default=1,
                     help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
-parser.add_argument('--sample', action='store', default='Neural_network_Example_summary.csv',
+parser.add_argument('--sample', action='store', default='csv/Neural_network_Example_summary.csv',
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
+parser.add_argument('-t','--tensorboard', action="store_false", help="Creates a tensorboard of this model that can be accessed from your browser")
+parser.add_argument('--checkpoint', action="store_true", help="Save model to disk")
+parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
 
 #Later will need to add arguments for user to predict data
 
 args = parser.parse_args()
 n_cpu = args.cpu
 sample = args.sample
+log = args.tensorboard
+verbose = args.verbose
+cp = args.checkpoint
 
 #Neural Network
 
@@ -28,9 +34,9 @@ dataset = pd.read_csv(sample)
 dataset = dataset.drop(dataset.columns[3:6], axis=1)
 
 #Input layer
-X = dataset.iloc[: , 1:13].values
+X = dataset.iloc[: , 1:14].values
 #Output layer
-Y = dataset.iloc[: , 13:14].values
+Y = dataset.iloc[: , 14:15].values
 
 #Encoding categorical data
 from sklearn.preprocessing import LabelEncoder
@@ -52,8 +58,7 @@ X[:,1] = labelencoder_unmodified.fit_transform(X[:,1])
 
 #Spliting dataset into training and test set
 from sklearn.model_selection import train_test_split
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=0)
-#A good number for random state is 42
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
 #Feature scaling -1 to +1 because there will be alot of parallel computations
 #can use standardisation or normalisation
@@ -91,12 +96,19 @@ from sklearn.metrics import explained_variance_score, mean_squared_error
 #Currently using tensorflow backend
 from keras import backend as k
 
+#Keras does not have root mean squared error so had to create a custom loss
+#to match Amazon's ML model loss function
+"""Custom metrics can be passed at the compilation step. 
+The function would need to take (y_true, y_pred) as arguments and return a single tensor value."""
+def root_mean_squared_error(y_true, y_pred):
+    return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
+
 #Neural Network architecture
 def build_regressor():
     #Initialising neural network
     regressor = Sequential()
     #Input layer and first hidden layer with dropout
-    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=12))
+    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=13))
     """General tip for the number of nodes in the input layer is that it should be the
     average of the number of nodes in the input and output layer. However this may
     be changed later when parameter tuning using cross validation"""
@@ -108,12 +120,6 @@ def build_regressor():
     #regressor.add(Dropout(rate=0.1))
     #Output layer, Densely-connected NN layer
     regressor.add(Dense(units=1, kernel_initializer='uniform'))
-    #Keras does not have root mean squared error so had to create a custom loss
-    #to match Amazon's ML model loss function
-    """Custom metrics can be passed at the compilation step. 
-    The function would need to take (y_true, y_pred) as arguments and return a single tensor value."""
-    def root_mean_squared_error(y_true, y_pred):
-        return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
     #Complie model    
     regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
     return regressor
@@ -125,7 +131,7 @@ model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
 from sklearn.model_selection import KFold
 kfold = KFold(n_splits=10, shuffle=True)
 
-accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu)
+accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
 #n_jobs is number of cpu's, -1 is all
 
 #Mean accuracies and variance
@@ -134,16 +140,34 @@ loss_variance = accuracy.std()
 
 date = strftime("%d-%m-%y")
 
-from keras.callbacks import History, TensorBoard, TerminateOnNaN 
+#Callbacks
+from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint 
+
+#Save loss function progress
 history = History()
-tensorboard = TensorBoard(log_dir='./logs/tensorboard/' + date, histogram_freq=0, write_graph=True, 
-                          write_images=True)
 
 #Model stops if loss function is nan                          
 terminate_on_nan = TerminateOnNaN()
 
+#Save model
+Checkpoint = ModelCheckpoint('./snapshots/trained_model.h5', monitor='root_mean_squared_error', verbose=verbose, save_best_only=True)
+
+#Creates tensorboard
+tensorboard = TensorBoard(log_dir='./logs/tensorboard/' + date, histogram_freq=0, write_graph=True, write_images=True)
+
+#Python doesn't have switch statements so will use a dictionary
+
+if log and not cp:
+    callbacks=[history, tensorboard, terminate_on_nan, Checkpoint]
+elif cp and not log:
+    callbacks=[history, terminate_on_nan, Checkpoint]
+elif log and cp:
+    callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
+else:
+    callbacks=[history, terminate_on_nan]
+    
 #Have to fit data to model again after cross validation
-history = model.fit(X_train, Y_train, callbacks=[history, tensorboard, terminate_on_nan])
+history = model.fit(X_train, Y_train, callbacks=callbacks)
 
 #print(history.history.keys())
 
@@ -159,14 +183,14 @@ plt.show()
 
 #Prediction on test data, needed to reshape array to subtract element wise
 y_pred = model.predict(X_test).reshape(-1,1)
-y_difference = np.subtract(Y_test, y_pred)
+y_difference = np.subtract(y_pred, Y_test)
 
 #True results
 plt.title('Actual Results')
 plt.plot(Y_test)
 plt.show()
 
-#graph comparing predicted and actual results
+#graphs comparing predicted and actual results
 plt.title('Acutal results vs Predicted results')
 plt.plot(Y_test)
 plt.plot(y_pred)
@@ -179,8 +203,21 @@ plt.show()
 
 from math import sqrt
 
-#Results variance and mean, Best possible score is 1.0, lower values are worse
+#Results variance and mean, best possible score is 1.0 for variance
 variance = explained_variance_score(Y_test, y_pred)
 rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
+
+#save model
+#history.save('trained_model.h5')
+
+#load model
+from keras.models import load_model
+loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
+print("Loaded model from disk")
+loaded_model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
+score = loaded_model.evaluate(X_test, Y_test, verbose=verbose)
+print("%s: %.2f" % (loaded_model.metrics_names[1], score[1]))
+
+
 
 
