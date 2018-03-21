@@ -23,19 +23,29 @@ Log::Log4perl->easy_init( $INFO );
 
 #   -GGTTCCAGAACCGGAGGACAAAGTACAAACGGCAGAAGCTGGAGGAGGAAGGGCCTGAGTCCGAGCAGAAGAAGAAGGGCTCCCATCACATCAACCGGTGGCGCATTGCCACGAAGCAGGCCAATGGGGAGGACATCGATGTCACCTCCAATGACTAGGGTGGGCAACCACAAACCCACGAGGGCAGAGTGCTGCTTGCTGCTGGCCAGGCCCCTGCGTGGGCCCAAGCTGGACTCTGGCCACTCCCTGGCCAGGCTTTGGGGAGGCCTGGAGTCATG	False	True	False	0	0	0	1684	34.9885726158
 
-my $raw_data = 'Example_summary.csv'; 
-
+#my @raw_data = 'csv/Example_summary.csv'; 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 GetOptions(
-	'sample=s' => \$raw_data,
-	'output=s'=> \my $new_file,
+	'sample=s{1,}' => \my @raw_data,
+	'output=s'	   => \my $new_file,
+	'tabs'		   => \my $tabs, 
 );
 
+my $total = 0;
+my $n_files = 0;
+
+if (scalar @raw_data == 0){@raw_data = @ARGV}
+
+OUTER: foreach my $current_file (@raw_data) { 
+shift @raw_data;
+$n_files++;
+
 # To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'output' flag
-$new_file = 'Neural_network_' . $raw_data;
+#if (! defined $new_file) {
+	$new_file = 'Neural_network_' . $current_file;
+#}
 
 my $exit = 0;
-my $total = 0;
 
 # Checks if file already exists
 LABEL: if (-e $new_file) {
@@ -43,7 +53,11 @@ LABEL: if (-e $new_file) {
 	my $input = <STDIN>;	
 	chomp $input;
 		if ($input =~ /^n$/i) {
-			die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
+			if ($n_files <= scalar @raw_data){
+				goto OUTER;
+			} else {
+				die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
+			}
 		} elsif ($input !~ /^y$/i) {
 			$exit++;
 			if ($exit == 3) { 
@@ -54,12 +68,16 @@ LABEL: if (-e $new_file) {
 		}
 }
 
-INFO "Creating data from '$raw_data' into file '$new_file'";
+INFO "Creating data from '$current_file' into file '$new_file'";
 
 my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
+my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
+
+if ($tabs) {$csv = $tsv}
+
 my @dataset;
 
-open (my $data, '<', $raw_data) or die "Could not find or open '$raw_data'\n";
+open (my $data, '<', $current_file) or die "Could not find or open '$current_file'\n";
 
 # Arrayref of column names 
 my $headers = $csv->getline($data);
@@ -124,7 +142,8 @@ try {
 	warn "Caught error: $_";
 };
 close $out;
-
+#undef ($new_file);
+}
 #Log file
 #INFO "Number of records processed : $total";
 #INFO "Number of bad records : ";
