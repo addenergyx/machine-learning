@@ -86,17 +86,17 @@ def build_regressor(optimizer, initializer, nodes1, nodes2, dropout, hidden_laye
 regressor = KerasRegressor(build_fn=build_regressor)
 
 #Grid search
-parameters = {'batch_size' : [50, 25, 10], 
-              'epochs' : [50 ,100, 150], 
+parameters = {'batch_size' : [50], 
+              'epochs' : [100], 
               'optimizer' : ['adam'],
-              'initializer' : ['uniform'],
-              'nodes1' : [6,8,10],
-              'nodes2' : [6,8,10],
-              'hidden_layers' : [1,2,3],
-              'dropout' : [0.1, 0.2, 0.5]
+              'initializer' : ['uniform', 'glorot_uniform'],
+              'nodes1' : [6],
+              'nodes2' : [6],
+              'hidden_layers' : [2,3,4,5,6],
+              'dropout' : [0.1,0.2,0.3]
               }
               
-grid_search = GridSearchCV(estimator=regressor, param_grid=parameters, cv=10, n_jobs=-1, scoring='neg_mean_squared_error')
+grid_search = GridSearchCV(estimator=regressor, param_grid=parameters, cv=10, n_jobs=-1, scoring='mean_squared_error')
 
 grid_search = grid_search.fit(X_train, Y_train)
 

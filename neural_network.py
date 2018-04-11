@@ -1,19 +1,18 @@
-
 #Command-Line Option and Argument Parsing
 import argparse
 parser = argparse.ArgumentParser(prog='Deletion Spread Neural Network', 
                                  description='This is a program to predict insertions and deletions on a sequence based on given data')
 
-parser.add_argument('--cpu', action="store", type=int, default=1,
+parser.add_argument('--cpu', action="store", type=int, default=1, 
                     help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
-parser.add_argument('--sample', action='store', default='csv/Neural_network_Example_summary.csv',
+parser.add_argument('--sample', action='store', default='csv/Neural_network_Example_summary.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
-parser.add_argument('-t','--tensorboard', action="store_false", help="Creates a tensorboard of this model that can be accessed from your browser")
+parser.add_argument('-t','--tensorboard', action="store_false", 
+                    help="Creates a tensorboard of this model that can be accessed from your browser")
 parser.add_argument('--checkpoint', action="store_true", help="Save model to disk")
 parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
 
 #Later will need to add arguments for user to predict data
-
 args = parser.parse_args()
 n_cpu = args.cpu
 sample = args.sample
@@ -211,6 +210,7 @@ rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 #history.save('trained_model.h5')
 
 #load model
+# if load_model <- code
 from keras.models import load_model
 loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
 print("Loaded model from disk")
