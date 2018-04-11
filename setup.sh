@@ -1,0 +1,1 @@
+export JOBLIB_START_METHOD=forkserver
