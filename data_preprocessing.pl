@@ -5,7 +5,6 @@ use strict; # Forces correct coding practises like declaring variables
 
 # Catches and explains errors
 use warnings;
-use diagnostics;
 
 use RNA;
 use Text::CSV_XS;
@@ -14,6 +13,7 @@ use Text::CSV::Slurp;
 use Try::Tiny;
 use Log::Log4perl qw( :easy );
 Log::Log4perl->easy_init( $INFO );
+use Parallel::ForkManager;
 
 # This script is to prepare the dataset for the neural network. Andrew suggested other features that they don't currently record such as number of a specific nucleotide and g-c content. This code will take the sequence from each observation to get the features required.
 
@@ -25,48 +25,69 @@ Log::Log4perl->easy_init( $INFO );
 
 #my @raw_data = 'csv/Example_summary.csv'; 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
+
+# By default the program will run 1 process per cpu. This is because if parallel processes are competing for I/O bandwidth to keep reloading their data, they'll run slower than if you run them sequentially.
+my $procs = `nproc --all`;
+
 GetOptions(
 	'sample=s{1,}' => \my @raw_data,
 	'output=s'	   => \my $new_file,
-	'tabs'		   => \my $tabs, 
-);
+	'tabs'		   => \my $tabs,
+	'procs=i'	   => \$procs,
+	'verbose'	   => \my $verbose,
+	'force'		   => \my $force,	
+) or die("Command line argument error\n");
 
-my $total = 0;
-my $n_files = 0;
+#my $total = 0;
+#my $n_files = 0;
+my $pm = Parallel::ForkManager->new($procs);
+
+$pm->run_on_finish( sub {
+	my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
+#$DB::single=1;
+		INFO "Process has finshed (pid:$pid)\n";
+	    INFO "$data_structure_reference->{observations} rows have been created in file '$data_structure_reference->{new_file}'\n"; 
+});
 
 if (scalar @raw_data == 0){@raw_data = @ARGV}
 
 OUTER: foreach my $current_file (@raw_data) { 
-shift @raw_data;
-$n_files++;
+my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
+#shift @raw_data;
+#$DB::single=1;
+#$n_files++;
 
 # To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'output' flag
+
+### NEED TO FIX ###
 #if (! defined $new_file) {
 	$new_file = 'Neural_network_' . $current_file;
 #}
+###
 
-my $exit = 0;
-
+#my $exit = 0;
+#if (! defined $force) {
 # Checks if file already exists
-LABEL: if (-e $new_file) {
-    print "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
-	my $input = <STDIN>;	
-	chomp $input;
-		if ($input =~ /^n$/i) {
-			if ($n_files <= scalar @raw_data){
-				goto OUTER;
-			} else {
-				die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
-			}
-		} elsif ($input !~ /^y$/i) {
-			$exit++;
-			if ($exit == 3) { 
-				ERROR print "Too many failed attempts\n";
-				exit(0);
-			}
-			goto LABEL;
-		}
-}
+#LABEL: if (-e $new_file) {
+#    warn "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
+#	my $input = <STDIN>;	
+#	chomp $input;
+#		if ($input =~ /^n$/i) {
+#			if ($n_files <= scalar @raw_data){
+#				goto OUTER;
+#			} else {
+#				die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
+#			}
+#		} elsif ($input !~ /^y$/i) {
+#			$exit++;
+#			if ($exit == 3) { 
+#				ERROR print "Too many failed attempts\n";
+#				exit(0);
+#			}
+#			goto LABEL;
+#		}
+#}
+#}
 
 INFO "Creating data from '$current_file' into file '$new_file'";
 
@@ -83,20 +104,19 @@ open (my $data, '<', $current_file) or die "Could not find or open '$current_fil
 my $headers = $csv->getline($data);
 
 # Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
-my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/ins_dels/];
+# Putting features in an array is useful for Text::CSV::Slurp
+my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,q/ins_dels/];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..7], @{$headers}[7,8], @{$new_features}[8] );
+my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
 $csv->column_names( @{ $headers} );
 
 while (my $observation = $csv->getline_hr($data)) {	
 	if (scalar keys %{$observation} == 9){
 		my $sequence = $observation->{'Aligned_Sequence'};
-   		my @features = variables($sequence);
-
-		#output column
-		my $output = ($observation->{'n_deleted'}*-1) + $observation->{'n_inserted'};
-		print "\nNumber of changes to aligned sequence \n$output\n";
+		my $insertions = $observation->{'n_inserted'};
+		my $deletions = $observation->{'n_deleted'};
+   		my @features = variables($sequence, $insertions, $deletions);
 
 		my $results = {
 
@@ -117,7 +137,10 @@ while (my $observation = $csv->getline_hr($data)) {
 			@{$new_features}[7] => $features[7],
 			'#Reads' => $observation->{'#Reads'},
 			'%Reads' => $observation->{'%Reads'},
-			ins_dels => $output,
+			@{$new_features}[8] => $features[8],
+			@{$new_features}[9] => $features[9],
+			@{$new_features}[10] => $features[10],
+			@{$new_features}[11] => $features[11],
 
 		};
 
@@ -142,15 +165,19 @@ try {
 	warn "Caught error: $_";
 };
 close $out;
+INFO "New neural network file '$new_file' has been created ";
+$pm->finish(0, {current_file => $current_file, new_file => $new_file, observations => scalar @dataset}); # Terminates child process
 #undef ($new_file);
 }
-#Log file
+$pm->wait_all_children;
+
+# Log file
 #INFO "Number of records processed : $total";
 #INFO "Number of bad records : ";
 
 sub variables {
-	my $sequence = shift;
-	$total++;
+	my ($sequence, $insertions, $deletions) = @_;
+	#$total++;
 # Output: Several features derived from the sequence 
 #  A : 65 
 #  C : 65 
@@ -159,8 +186,8 @@ sub variables {
 #  G-C Content : 18
 #  TTT Content : 1
 #  Minimum free energy prediction: -91.5
-	
-	print "Sequence:\n$sequence\n\n";
+
+	if (substr($sequence, 0, 1) eq '-'){$sequence =~ s/^-//}
 
 # Nucleotide count
 
@@ -171,26 +198,66 @@ sub variables {
 	my $c_count = () = $sequence =~ /c/ig; 
 	my $t_count = () = $sequence =~ /t/ig; 
 	my $g_count = () = $sequence =~ /g/ig; 
-	print "A : $a_count \nC : $a_count \nT : $t_count \nG : $g_count \n";
 
 # G-C bonds are stronger then A-T bonds as they have an extra hydrogen bond, therefore making them harder to break
-	my $gc_content = () = $sequence =~ /gc/ig;
-	print "G-C Content : $gc_content\n"; 
+	my $gc_content = () = $sequence =~ /(?=(gc)|(cg))/ig;
 
 # TGA is the stop codon, the ribosome would stop translation at this point
 	my $tga_count = () = $sequence =~ /tga/ig;
 
 # 3 or more T bases in a row can pervent polymerase from working properlly and therefore it can drop off
 	my $triple_t_count = () = $sequence =~ /ttt/ig;
-	print "TTT Content : $triple_t_count\n"; 
 
 # Secondary structure: The lab uses RNAfold WebServer to get information on the secondary structure of the DNA/RNA sequence. ViennaRNA has a package I can install and use to get the features needed
-
 	my ($structure, $mfe) = RNA::fold($sequence);
-	print "Minimum free energy prediction: $mfe\n\n";
 
-	my @features = ($a_count, $c_count, $t_count, $g_count, $gc_content, $tga_count, $triple_t_count, $mfe);
-	print join ("\n", @features);
+# PAM count:  The PAM is where CAS-9 pauses to make cuts. Currently the only PAM used is NGG however this may change in the future
+	my $PAM_count = () = $sequence =~ /.gg/ig;
+
+# Length of sequence
+	my $length = length($sequence);
+
+# Frameshift: A frameshift mutation occurs by the number of in/dels not being divisible by 3. As a result the translation of the sequence produces a different amino acid and therefore protein.
+	my ($in_frameshift, $del_frameshift, $frameshift);	
+    
+	#Should do frameshift for each cut site not total, need ref seq to do this for insertions  
+	if ($deletions > 0 && $deletions % 3){
+		$del_frameshift = 'True';
+	} else {
+		$del_frameshift = 'False';
+	}	
+
+	if ($insertions > 0 && $insertions % 3){
+		$in_frameshift = 'True';
+	} else {
+		$in_frameshift = 'False';
+	}
+
+# Perl and python don't have switch-case statements, perl has a switch module but it is buggy and has been removed from core. 
+	if ($in_frameshift eq 'False' && $del_frameshift eq 'False'){
+		$frameshift = 'False';	
+	} else {
+	    #$in_frameshift eq 'true' || $del_frameshift eq 'true'
+		$frameshift = 'True';
+	}
+
+# Output
+	my $output = ($deletions*-1) + $insertions;
+	#print "\nNumber of changes to aligned sequence \n$output\n";
+
+	my @features = ($a_count, $c_count, $t_count, $g_count, $gc_content, $tga_count, $triple_t_count, $mfe, $PAM_count, $length, $frameshift, $output);
+	#print join ("\n", @features);
+
+	if ($verbose) {
+		print "Sequence: $sequence\n\n";
+		print "A : $a_count \nC : $a_count \nT : $t_count \nG : $g_count \n";
+		print "G-C Content : $gc_content\n"; 
+		print "TTT Content : $triple_t_count\n"; 
+		print "Minimum free energy prediction: $mfe\n";
+		print "Frameshift: $frameshift\n";
+		print "Length of sequence: $length\n"; 
+		print "PAM count: $PAM_count\n\n";
+	}
 	
 	return @features;
  
