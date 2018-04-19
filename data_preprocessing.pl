@@ -26,7 +26,7 @@ use Parallel::ForkManager;
 #my @raw_data = 'csv/Example_summary.csv'; 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 
-# By default the program will run 1 process per cpu. This is because if parallel processes are competing for I/O bandwidth to keep reloading their data, they'll run slower than if you run them sequentially.
+# By default the program will run 1 process per cpu. This is because if parallel processes are competing for I/O bandwidth to keep reloading their data, they'll run slower than if they are ra sequentially.
 my $procs = `nproc --all`;
 
 GetOptions(
@@ -35,7 +35,9 @@ GetOptions(
 	'tabs'		   => \my $tabs,
 	'procs=i'	   => \$procs,
 	'verbose'	   => \my $verbose,
-	'force'		   => \my $force,	
+	'force'		   => \my $force,
+	'ins'		   => \my $ins,
+	'dels'		   => \my $dels	
 ) or die("Command line argument error\n");
 
 #my $total = 0;
@@ -46,7 +48,7 @@ $pm->run_on_finish( sub {
 	my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
 #$DB::single=1;
 		INFO "Process has finshed (pid:$pid)\n";
-	    INFO "$data_structure_reference->{observations} rows have been created in file '$data_structure_reference->{new_file}'\n"; 
+		INFO "$data_structure_reference->{observations} observations have been created in file '$data_structure_reference->{new_file}'\n"; 
 });
 
 if (scalar @raw_data == 0){@raw_data = @ARGV}
@@ -61,10 +63,16 @@ my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
 
 ### NEED TO FIX ###
 #if (! defined $new_file) {
-	$new_file = 'Neural_network_' . $current_file;
+	if ($ins) {
+		$new_file = 'Neural_network_insertions_' . $current_file;
+	} elsif ($dels) {
+		$new_file = 'Neural_network_deletions_' . $current_file;
+	} else  {
+		$new_file = 'Neural_network_' . $current_file;
+	}
 #}
-###
 
+# STDIN doesn't work properlly with forking
 #my $exit = 0;
 #if (! defined $force) {
 # Checks if file already exists
@@ -88,6 +96,7 @@ my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
 #		}
 #}
 #}
+###
 
 INFO "Creating data from '$current_file' into file '$new_file'";
 
@@ -97,6 +106,15 @@ my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_d
 if ($tabs) {$csv = $tsv}
 
 my @dataset;
+my $output_label;
+
+if ($ins) {
+	$output_label = 'insertions';
+} elsif ($dels) {
+	$output_label = 'deletions';
+} else {
+	$output_label = 'ins/dels';
+}
 
 open (my $data, '<', $current_file) or die "Could not find or open '$current_file'\n";
 
@@ -105,44 +123,51 @@ my $headers = $csv->getline($data);
 
 # Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
 # Putting features in an array is useful for Text::CSV::Slurp
-my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,q/ins_dels/];
+my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,$output_label];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-my @dataset_header =  $csv->column_names( @{ $headers}[0..6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
+my @dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
 $csv->column_names( @{ $headers} );
 
-while (my $observation = $csv->getline_hr($data)) {	
+LOOP: while (my $observation = $csv->getline_hr($data)) {	
 	if (scalar keys %{$observation} == 9){
+
 		my $sequence = $observation->{'Aligned_Sequence'};
 		my $insertions = $observation->{'n_inserted'};
 		my $deletions = $observation->{'n_deleted'};
-   		my @features = variables($sequence, $insertions, $deletions);
+   		
+		if ($dels) {
+			if ($insertions > 0) {next LOOP};
+		} elsif ($ins) {
+			if ($deletions > 0) {next LOOP};
+		}
 
-		my $results = {
+		my @features = variables($sequence, $insertions, $deletions);
 
-			Aligned_Sequence => $observation->{'Aligned_Sequence'},
-			NHEJ => $observation->{'NHEJ'},
-			UNMODIFIED => $observation->{'UNMODIFIED'},
-			HDR => $observation->{'HDR'},
-			n_deleted => $observation->{'n_deleted'},
-			n_inserted => $observation->{'n_inserted'},
-			n_mutated => $observation->{'n_mutated'},
-			@{$new_features}[0] => $features[0],
-			@{$new_features}[1] => $features[1],
-			@{$new_features}[2] => $features[2],
-			@{$new_features}[3] => $features[3],
-			@{$new_features}[4] => $features[4],
-			@{$new_features}[5] => $features[5],
-			@{$new_features}[6] => $features[6],
-			@{$new_features}[7] => $features[7],
-			'#Reads' => $observation->{'#Reads'},
-			'%Reads' => $observation->{'%Reads'},
-			@{$new_features}[8] => $features[8],
-			@{$new_features}[9] => $features[9],
-			@{$new_features}[10] => $features[10],
-			@{$new_features}[11] => $features[11],
-
-		};
+			my $results = {
+				Aligned_Sequence => $observation->{'Aligned_Sequence'},
+				NHEJ => $observation->{'NHEJ'},
+				UNMODIFIED => $observation->{'UNMODIFIED'},
+				HDR => $observation->{'HDR'},
+				#n_deleted => $observation->{'n_deleted'},
+				#n_inserted => $observation->{'n_inserted'},
+				# Also removed n deleted/inserted from @dataset_header
+				n_mutated => $observation->{'n_mutated'},
+				@{$new_features}[0] => $features[0],
+				@{$new_features}[1] => $features[1],
+				@{$new_features}[2] => $features[2],
+				@{$new_features}[3] => $features[3],
+				@{$new_features}[4] => $features[4],
+				@{$new_features}[5] => $features[5],
+				@{$new_features}[6] => $features[6],
+				@{$new_features}[7] => $features[7],
+				'#Reads' => $observation->{'#Reads'},
+				'%Reads' => $observation->{'%Reads'},
+				@{$new_features}[8] => $features[8],
+				@{$new_features}[9] => $features[9],
+				@{$new_features}[10] => $features[10],
+				@{$new_features}[11] => $features[11],
+			};
 
 		push (@dataset, $results);
 		
@@ -161,11 +186,11 @@ open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
 try {
 	my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
 	print $out $slurp;
+	INFO "New neural network file '$new_file' has been created ";
 } catch {
 	warn "Caught error: $_";
 };
 close $out;
-INFO "New neural network file '$new_file' has been created ";
 $pm->finish(0, {current_file => $current_file, new_file => $new_file, observations => scalar @dataset}); # Terminates child process
 #undef ($new_file);
 }
@@ -220,31 +245,49 @@ sub variables {
 # Frameshift: A frameshift mutation occurs by the number of in/dels not being divisible by 3. As a result the translation of the sequence produces a different amino acid and therefore protein.
 	my ($in_frameshift, $del_frameshift, $frameshift);	
     
-	#Should do frameshift for each cut site not total, need ref seq to do this for insertions  
-	if ($deletions > 0 && $deletions % 3){
-		$del_frameshift = 'True';
-	} else {
-		$del_frameshift = 'False';
-	}	
-
-	if ($insertions > 0 && $insertions % 3){
-		$in_frameshift = 'True';
-	} else {
-		$in_frameshift = 'False';
+	#Should do frameshift for each cut site not total, need ref seq to do this for insertions
+	if ($dels || (! defined $dels && ! defined $ins)) {  
+		if ($deletions % 3 == 0){
+			$del_frameshift = 'False';
+		} else {
+			$del_frameshift = 'True';
+		}	
 	}
 
-# Perl and python don't have switch-case statements, perl has a switch module but it is buggy and has been removed from core. 
-	if ($in_frameshift eq 'False' && $del_frameshift eq 'False'){
-		$frameshift = 'False';	
+	if ($ins || (! defined $dels && ! defined $ins)) {
+		if ($insertions % 3 == 0){
+			$in_frameshift = 'False';
+		} else {
+			$in_frameshift = 'True';
+		}
+	}
+
+# Perl and python don't have switch-case statements, perl has a switch module but it is buggy and has been removed from core.
+
+	if (! defined $in_frameshift){
+		$frameshift = $del_frameshift;
+	} elsif (! defined $del_frameshift) {
+		$frameshift = $in_frameshift;
 	} else {
-	    #$in_frameshift eq 'true' || $del_frameshift eq 'true'
-		$frameshift = 'True';
+		if ($in_frameshift eq 'False' && $del_frameshift eq 'False'){
+			$frameshift = 'False';	
+		} else {
+	    	#$in_frameshift eq 'true' || $del_frameshift eq 'true'
+			$frameshift = 'True';
+		}
 	}
 
 # Output
-	my $output = ($deletions*-1) + $insertions;
-	#print "\nNumber of changes to aligned sequence \n$output\n";
-
+	my $output;
+		if ($dels) {
+			$output = $deletions;
+		} elsif ($ins) {
+			$output = $insertions;
+		} else {
+			$output = ($deletions*-1) + $insertions;
+			#print "\nNumber of changes to aligned sequence \n$output\n";
+		}
+	
 	my @features = ($a_count, $c_count, $t_count, $g_count, $gc_content, $tga_count, $triple_t_count, $mfe, $PAM_count, $length, $frameshift, $output);
 	#print join ("\n", @features);
 
@@ -258,10 +301,7 @@ sub variables {
 		print "Length of sequence: $length\n"; 
 		print "PAM count: $PAM_count\n\n";
 	}
-	
 	return @features;
- 
 }
-
 
 
