@@ -98,8 +98,6 @@ my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
 #}
 ###
 
-INFO "Creating data from '$current_file' into file '$new_file'";
-
 my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
 my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
 
@@ -132,6 +130,7 @@ $csv->column_names( @{ $headers} );
 LOOP: while (my $observation = $csv->getline_hr($data)) {	
 	if (scalar keys %{$observation} == 9){
 
+		INFO "Building data from '$current_file'";
 		my $sequence = $observation->{'Aligned_Sequence'};
 		my $insertions = $observation->{'n_inserted'};
 		my $deletions = $observation->{'n_deleted'};
@@ -173,7 +172,7 @@ LOOP: while (my $observation = $csv->getline_hr($data)) {
 		
 	} else {
 		
-		die "Your CSV does not match intended format Please amend CSV";
+		die "Your CSV does not match intended format Please amend CSV$_";
 
 	}
 }
@@ -186,7 +185,7 @@ open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
 try {
 	my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
 	print $out $slurp;
-	INFO "New neural network file '$new_file' has been created ";
+	INFO "Data stored into new neural network file '$new_file'";
 } catch {
 	warn "Caught error: $_";
 };
@@ -277,7 +276,7 @@ sub variables {
 		}
 	}
 
-# Output
+# Output insertion/deletion
 	my $output;
 		if ($dels) {
 			$output = $deletions;
@@ -299,7 +298,9 @@ sub variables {
 		print "Minimum free energy prediction: $mfe\n";
 		print "Frameshift: $frameshift\n";
 		print "Length of sequence: $length\n"; 
-		print "PAM count: $PAM_count\n\n";
+		print "PAM count: $PAM_count\n";
+		print "Frameshift: $frameshift\n";
+		print "Output: $output\n\n";
 	}
 	return @features;
 }
