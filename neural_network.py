@@ -1,11 +1,11 @@
 #Command-Line Option and Argument Parsing
 import argparse
-parser = argparse.ArgumentParser(prog='Deletion Spread Neural Network', 
+parser = argparse.ArgumentParser(prog='Deletion/Insertion Spread Neural Network', 
                                  description='This is a program to predict insertions and deletions on a sequence based on given data')
 
 parser.add_argument('--cpu', action="store", type=int, default=1, 
                     help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
-parser.add_argument('--sample', action='store', default='csv/Neural_network_Example_summary.csv', 
+parser.add_argument('--sample', action='store', default='Neural_network_insertions_Example_summary.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
 parser.add_argument('-t','--tensorboard', action="store_false", 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
@@ -27,15 +27,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from time import strftime
+from turicreate import SFrame
 
 #Importing dataset
 dataset = pd.read_csv(sample)
-dataset = dataset.drop(dataset.columns[3:6], axis=1)
+dataset = dataset.drop(dataset.columns[0], axis=1)
+
+#Looking into sframe as an alternative to pandas
+sf = SFrame(data=dataset)
+sf.explore()
 
 #Input layer
-X = dataset.iloc[: , 1:14].values
+X = dataset.iloc[: , 0:17].values
 #Output layer
-Y = dataset.iloc[: , 14:15].values
+Y = dataset.iloc[: , 17:18].values
+
+#Length of input, will be used when building model
+input_dim = len(X[0])
 
 #Encoding categorical data
 from sklearn.preprocessing import LabelEncoder
@@ -50,10 +58,14 @@ X[:,0] = labelencoder_nhej.fit_transform(X[:,0])
 labelencoder_unmodified = LabelEncoder()
 X[:,1] = labelencoder_unmodified.fit_transform(X[:,1])
 
+#Encoding frameshift
+labelencoder_frameshift = LabelEncoder()
+X[:,14] = labelencoder_frameshift.fit_transform(X[:,14])
+
 #All results are false in this sample so don't need this feature
 #Encoding HDR
-#labelencoder_hdr = LabelEncoder()
-#X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
+labelencoder_hdr = LabelEncoder()
+X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
 
 #Spliting dataset into training and test set
 from sklearn.model_selection import train_test_split
@@ -107,7 +119,7 @@ def build_regressor():
     #Initialising neural network
     regressor = Sequential()
     #Input layer and first hidden layer with dropout
-    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=13))
+    regressor.add(Dense(units=6, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
     """General tip for the number of nodes in the input layer is that it should be the
     average of the number of nodes in the input and output layer. However this may
     be changed later when parameter tuning using cross validation"""
@@ -154,8 +166,7 @@ Checkpoint = ModelCheckpoint('./snapshots/trained_model.h5', monitor='root_mean_
 #Creates tensorboard
 tensorboard = TensorBoard(log_dir='./logs/tensorboard/' + date, histogram_freq=0, write_graph=True, write_images=True)
 
-#Python doesn't have switch statements so will use a dictionary
-
+#Python doesn't have switch statements so will use a dictionary later
 if log and not cp:
     callbacks=[history, tensorboard, terminate_on_nan, Checkpoint]
 elif cp and not log:
@@ -211,13 +222,9 @@ rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 
 #load model
 # if load_model <- code
-from keras.models import load_model
-loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
-print("Loaded model from disk")
-loaded_model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
-score = loaded_model.evaluate(X_test, Y_test, verbose=verbose)
-print("%s: %.2f" % (loaded_model.metrics_names[1], score[1]))
-
-
-
-
+#from keras.models import load_model
+#loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
+#print("Loaded model from disk")
+#loaded_model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
+#score = loaded_model.evaluate(X_test, Y_test, verbose=verbose)
+#print("%s: %.2f" % (loaded_model.metrics_names[1], score[1]))
