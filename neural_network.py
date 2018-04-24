@@ -3,22 +3,25 @@ import argparse
 parser = argparse.ArgumentParser(prog='Deletion/Insertion Spread Neural Network', 
                                  description='This is a program to predict insertions and deletions on a sequence based on given data')
 
-parser.add_argument('--cpu', action="store", type=int, default=1, 
+parser.add_argument('-c','--cpu', action="store", type=int, default=-1, 
                     help="The number of CPUs to use to do the computation (default: -1 ‘all CPUs')")
-parser.add_argument('--sample', action='store', default='Neural_network_insertions_Example_summary.csv', 
+parser.add_argument('--sample', action='store', default='Neural_network_Example_summary.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
-parser.add_argument('-t','--tensorboard', action="store_false", 
+parser.add_argument('-t','--tensorboard', action="store_true", 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
-parser.add_argument('--checkpoint', action="store_true", help="Save model to disk")
+parser.add_argument('-s','--save', action="store_true", help="Save model to disk")
 parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
+parser.add_argument('-p','--predict', nargs='+', 
+                    help="Sample data for model to make a prediction on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%Reads. For example: 0 1 0 0 68 77 39 94 68 2 1 -106.400001525879 26 278 0 1684 34.9885726158")
 
 #Later will need to add arguments for user to predict data
 args = parser.parse_args()
 n_cpu = args.cpu
 sample = args.sample
-log = args.tensorboard
+board = args.tensorboard
 verbose = args.verbose
-cp = args.checkpoint
+cp = args.save
+user_observation = args.predict
 
 #Neural Network
 
@@ -27,15 +30,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from time import strftime
-from turicreate import SFrame
+#from turicreate import SFrame
 
 #Importing dataset
 dataset = pd.read_csv(sample)
+list(dataset)
 dataset = dataset.drop(dataset.columns[0], axis=1)
 
 #Looking into sframe as an alternative to pandas
-sf = SFrame(data=dataset)
-sf.explore()
+#sf = SFrame(data=dataset)
+#sf.explore()
 
 #Input layer
 X = dataset.iloc[: , 0:17].values
@@ -70,6 +74,8 @@ X[:,2] = labelencoder_hdr.fit_transform(X[:,2])
 #Spliting dataset into training and test set
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+
+real_input = X_test
 
 #Feature scaling -1 to +1 because there will be alot of parallel computations
 #can use standardisation or normalisation
@@ -161,17 +167,17 @@ history = History()
 terminate_on_nan = TerminateOnNaN()
 
 #Save model
-Checkpoint = ModelCheckpoint('./snapshots/trained_model.h5', monitor='root_mean_squared_error', verbose=verbose, save_best_only=True)
+Checkpoint = ModelCheckpoint("./snapshots/%s_trained_model.h5" % date, monitor='root_mean_squared_error', verbose=verbose, save_best_only=True)
 
 #Creates tensorboard
 tensorboard = TensorBoard(log_dir='./logs/tensorboard/' + date, histogram_freq=0, write_graph=True, write_images=True)
 
 #Python doesn't have switch statements so will use a dictionary later
-if log and not cp:
-    callbacks=[history, tensorboard, terminate_on_nan, Checkpoint]
-elif cp and not log:
+if board and not cp:
+    callbacks=[history, tensorboard, terminate_on_nan]
+elif cp and not board:
     callbacks=[history, terminate_on_nan, Checkpoint]
-elif log and cp:
+elif board and cp:
     callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
 else:
     callbacks=[history, terminate_on_nan]
@@ -217,14 +223,27 @@ from math import sqrt
 variance = explained_variance_score(Y_test, y_pred)
 rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 
+#Single prediction
+if user_observation:
+    new_prediction = model.predict(sc.transform(np.array([user_observation])))
+    print ("Prediction is %s" % new_prediction)
+
+import subprocess
+
+if board:
+    subprocess.call(['tensorboard', '--logdir', './logs/tensorboard/' + date])
+
 #save model
-#history.save('trained_model.h5')
+#history.save('%s_trained_model.h5' % date)
 
 #load model
 # if load_model <- code
-#from keras.models import load_model
-#loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
-#print("Loaded model from disk")
-#loaded_model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
-#score = loaded_model.evaluate(X_test, Y_test, verbose=verbose)
-#print("%s: %.2f" % (loaded_model.metrics_names[1], score[1]))
+def load_model():
+    from keras.models import load_model
+    loaded_model = load_model('./snapshots/08-03-18_best_model.h5', custom_objects={'root_mean_squared_error': root_mean_squared_error })
+    print("Loaded model from disk")
+    loaded_model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
+    score = loaded_model.evaluate(X_test, Y_test, verbose=verbose)
+    print("%s: %.2f" % (loaded_model.metrics_names[1], score[1]))
+    return
+
