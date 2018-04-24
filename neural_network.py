@@ -11,7 +11,7 @@ parser.add_argument('-t','--tensorboard', action="store_true",
                     help="Creates a tensorboard of this model that can be accessed from your browser")
 parser.add_argument('-s','--save', action="store_true", help="Save model to disk")
 parser.add_argument('-v','--verbose', action="store_true", help="Verbose")
-parser.add_argument('-p','--predict', nargs='+', 
+parser.add_argument('-p','--predict', nargs='+',
                     help="Sample data for model to make a prediction on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%Reads. For example: 0 1 0 0 68 77 39 94 68 2 1 -106.400001525879 26 278 0 1684 34.9885726158")
 
 #Later will need to add arguments for user to predict data
@@ -225,9 +225,21 @@ rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 
 #Single prediction
 if user_observation:
-    new_prediction = model.predict(sc.transform(np.array([user_observation])))
+
+    str_observation = ','.join(user_observation)
+    import re
+    fixed_observation = re.sub('true', '1', str_observation, flags=re.IGNORECASE)
+    fixed_observation = re.sub('false', '0', fixed_observation, flags=re.IGNORECASE)
+
+    #list comprehension didn't work
+    #user_observation = [1 if x is 'True' else x for x in user_observation]
+    #user_observation = [0 if x is 'False' else x for x in user_observation]
+
+    list_observation = [float(i) for i in fixed_observation.split(',')]
+    new_prediction = model.predict(sc.transform(np.array([list_observation])))
     print ("Prediction is %s" % new_prediction)
 
+#Open tensorboard if user creates new model
 import subprocess
 
 if board:
