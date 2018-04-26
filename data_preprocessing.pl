@@ -54,10 +54,9 @@ $pm->run_on_finish( sub {
 if (scalar @raw_data == 0){@raw_data = @ARGV}
 
 OUTER: foreach my $current_file (@raw_data) { 
-my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
-#shift @raw_data;
-#$DB::single=1;
-#$n_files++;
+	my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
+	#shift @raw_data;
+	#$n_files++;
 
 # To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'output' flag
 
@@ -98,50 +97,50 @@ my $pid = $pm->start and next OUTER; # Forks and returns pid of child process
 #}
 ###
 
-my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
-my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
+	my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
+	my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
 
-if ($tabs) {$csv = $tsv}
+	if ($tabs) {$csv = $tsv}
 
-my @dataset;
-my $output_label;
+	my @dataset;
+	my $output_label;
 
-if ($ins) {
-	$output_label = 'insertions';
-} elsif ($dels) {
-	$output_label = 'deletions';
-} else {
-	$output_label = 'ins/dels';
-}
+	if ($ins) {
+		$output_label = 'insertions';
+	} elsif ($dels) {
+		$output_label = 'deletions';
+	} else {
+		$output_label = 'ins/dels';
+	}
 
-open (my $data, '<', $current_file) or die "Could not find or open '$current_file'\n";
+	open (my $data, '<', $current_file) or die "Could not find or open '$current_file'\n";
 
 # Arrayref of column names 
-my $headers = $csv->getline($data);
+	my $headers = $csv->getline($data);
 
 # Using q instead of "" as the latter appears in the csv and quotes are another common separated value 
 # Putting features in an array is useful for Text::CSV::Slurp
-my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,$output_label];
+	my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,$output_label];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-my @dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
+	my @dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
 $csv->column_names( @{ $headers} );
 
-LOOP: while (my $observation = $csv->getline_hr($data)) {	
-	if (scalar keys %{$observation} == 9){
+	LOOP: while (my $observation = $csv->getline_hr($data)) {	
+		if (scalar keys %{$observation} == 9){
 
-		INFO "Building data from '$current_file'";
-		my $sequence = $observation->{'Aligned_Sequence'};
-		my $insertions = $observation->{'n_inserted'};
-		my $deletions = $observation->{'n_deleted'};
+			INFO "Building data from '$current_file'";
+			my $sequence = $observation->{'Aligned_Sequence'};
+			my $insertions = $observation->{'n_inserted'};
+			my $deletions = $observation->{'n_deleted'};
    		
-		if ($dels) {
-			if ($insertions > 0) {next LOOP};
-		} elsif ($ins) {
-			if ($deletions > 0) {next LOOP};
-		}
+			if ($dels) {
+				if ($insertions > 0) {next LOOP};
+			} elsif ($ins) {
+				if ($deletions > 0) {next LOOP};
+			}
 
-		my @features = variables($sequence, $insertions, $deletions);
+			my @features = variables($sequence, $insertions, $deletions);
 
 			my $results = {
 				Aligned_Sequence => $observation->{'Aligned_Sequence'},
@@ -168,29 +167,29 @@ LOOP: while (my $observation = $csv->getline_hr($data)) {
 				@{$new_features}[11] => $features[11],
 			};
 
-		push (@dataset, $results);
+			push (@dataset, $results);
 		
-	} else {
+		} else {
 		
-		die "Your CSV does not match intended format Please amend CSV$_";
+			die "Your CSV does not match intended format Please amend CSV$_";
 
+		}
 	}
-}
 
-close $data;
+	close $data;
 
 # Putting the dataset in at once instead of adding in row by row to avoid memory leak by having the file open for as little as necessary
  
-open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
-try {
-	my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
-	print $out $slurp;
-	INFO "Data stored into new neural network file '$new_file'";
-} catch {
-	warn "Caught error: $_";
-};
-close $out;
-$pm->finish(0, {current_file => $current_file, new_file => $new_file, observations => scalar @dataset}); # Terminates child process
+	open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
+	try {
+		my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@dataset_header);
+		print $out $slurp;
+		INFO "Data stored into new neural network file '$new_file'";
+	} catch {
+		warn "Caught error: $_";
+	};
+	close $out;
+	$pm->finish(0, {current_file => $current_file, new_file => $new_file, observations => scalar @dataset}); # Terminates child process
 #undef ($new_file);
 }
 $pm->wait_all_children;
