@@ -14,6 +14,7 @@ use Try::Tiny;
 use Log::Log4perl qw( :easy );
 Log::Log4perl->easy_init( $INFO );
 use Parallel::ForkManager;
+use Text::CSV::Separator qw(get_separator);
 
 # This script is to prepare the dataset for the neural network. Andrew suggested other features that they don't currently record such as number of a specific nucleotide and g-c content. This code will take the sequence from each observation to get the features required.
 
@@ -32,7 +33,6 @@ my $procs = `nproc --all`;
 GetOptions(
 	'sample=s{1,}' => \my @raw_data,
 	'output=s'	   => \my $new_file,
-	'tabs'		   => \my $tabs,
 	'procs=i'	   => \$procs,
 	'verbose'	   => \my $verbose,
 	'force'		   => \my $force,
@@ -97,10 +97,13 @@ OUTER: foreach my $current_file (@raw_data) {
 #}
 ###
 
-	my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
-	my $tsv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
+	my $sep_char = get_separator(
+									path	=>	$current_file,
+									include =>  ["\cI"],
+									lucky	=>	1,
+								 );
 
-	if ($tabs) {$csv = $tsv}
+	my $csv = Text::CSV_XS->new ({sep_char  =>  $sep_char}) or die Text::CSV_XS->error_diag();
 
 	my @dataset;
 	my $output_label;
@@ -171,7 +174,7 @@ $csv->column_names( @{ $headers} );
 		
 		} else {
 		
-			die "Your CSV does not match intended format Please amend CSV$_";
+			die "Your CSV does not match intended format Please amend CSV\n$_";
 
 		}
 	}
