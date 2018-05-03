@@ -103,6 +103,8 @@ OUTER: foreach my $current_file (@raw_data) {
 									lucky	=>	1,
 								 );
 
+	if (! defined $sep_char){ die "Could not determine separator in CSV" }
+
 	my $csv = Text::CSV_XS->new ({sep_char  =>  $sep_char}) or die Text::CSV_XS->error_diag();
 
 	my @dataset;
