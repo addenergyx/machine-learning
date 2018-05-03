@@ -41,7 +41,6 @@ OUTER: foreach my $current_file (@raw_data) {
 
 	my @dataset;
 	my $output_label;
-	my $x = 0;
 
 	if ($ins) {
     	$output_label = 'insertions';
@@ -57,9 +56,7 @@ OUTER: foreach my $current_file (@raw_data) {
 
 	my @dataset_header = $csv->column_names(@{$headers});
 	
-	while (my $observation = $csv->getline_hr($data)) {
-
-		$x++;
+	for (my $x = 0;  my $observation = $csv->getline_hr($data); $x++) {
 
 		my $ref = $observation->{'Reference_Sequence'};
 		my $reads = $observation->{'#Reads'};
@@ -78,8 +75,9 @@ $DB::single=1;
 		foreach my $dinucleotide (@features) {
 			$i++;
 			$results->{$i} = $dinucleotide;
-
-			if ($x == 1) {
+### Temporary fix ###
+			if ($x == 0) {
+###				
 				push (@position, $i);
 			}
 		}
@@ -88,10 +86,11 @@ $DB::single=1;
 		push @dataset, ($results) x $reads;
 		
 ### Temporary fix ###
-		if ($x == 1) {
+		if ($x == 0) {
+###
 			push (@position, $output_label);
 		}
-###
+
 
 	}
 	close $data;
