@@ -33,12 +33,12 @@ OUTER: foreach my $current_file (@raw_data) {
         $new_file = 'classification_neural_network_' . $current_file;
     }
 	
-# Only Miseq .. onwards has ref sequence in data due to crispresso update and have tab separators so don't need default csv
-	#my $csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
-	my $csv = Text::CSV_XS->new ({sep_char  =>  "\cI"}) or die Text::CSV_XS->error_diag();
+# Only Miseq 19 onwards has ref sequence in data due to crispresso update and have tab separators so don't need default csv
+# Won't need forking because the csvs' are merged into one csv (7798000+ results) before running this script.
+# Some results have double quotes in then so needed to change quote and escape char defaults so that the result wasn't taken as one string
+	my $csv = Text::CSV_XS->new ({sep_char  =>  "\cI", quote_char => "?", escape_char => "?"}) or die Text::CSV_XS->error_diag();
 	my @position;
-	#if ($tabs) {$csv = $tsv}
-
+	my @list_of_positions; 
 	my @dataset;
 	my $output_label;
 
@@ -51,53 +51,57 @@ OUTER: foreach my $current_file (@raw_data) {
 	}
 
 	open (my $data, '<', $current_file) or die "Could not find or open '$current_file'\n";
-
+	
 	my $headers = $csv->getline($data);
 
 	my @dataset_header = $csv->column_names(@{$headers});
 	
 	for (my $x = 0;  my $observation = $csv->getline_hr($data); $x++) {
-
+		
+$DB::single=1;
 		my $ref = $observation->{'Reference_Sequence'};
 		my $reads = $observation->{'#Reads'};
 		my $insertions = $observation->{'n_inserted'};
 		my $deletions = $observation->{'n_deleted'};
-		
 
-		if (substr($ref, 0, 1) eq '-'){$ref =~ s/^-//}	
-		if (substr($ref, 0, -1) eq '-'){$ref =~ s/^-//}	
-$DB::single=1;
 		my @features = variables($ref, $insertions, $deletions);
 		my $output = pop @features;	
-		my $results = {};
+		my $results;
 		my $i = 0;
 		
 		foreach my $dinucleotide (@features) {
 			$i++;
 			$results->{$i} = $dinucleotide;
 ### Temporary fix ###
-			if ($x == 0) {
+###if ($x == 0) {
 ###				
-				push (@position, $i);
-			}
+			push (@position, $i);			
+###}
 		}
 		$results->{$output_label} = $output;
 $DB::single=1;
-		push @dataset, ($results) x $reads;
-		
+		for (my $y = 0; $y < $reads; $y++) {push @dataset, $results}
+
+		push (@list_of_positions, [@position]);
 ### Temporary fix ###
-		if ($x == 0) {
+#if ($x == 0) {
 ###
-			push (@position, $output_label);
-		}
-
-
+#			push (@position, $output_label);
+#}
+		undef @position;
+		$results = {};
+		print "$x\n";
 	}
+$DB::single=1;	
+	foreach my $row (@list_of_positions) {
+		if (scalar @{$row} > scalar @position) {@position = @{$row}}	
+	}
+
+	push (@position, $output_label);
 	close $data;
 
     open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
     try {
-$DB::single=1;
         my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@position);
         print $out $slurp;
         INFO "Data stored into new neural network file '$new_file'";
@@ -113,7 +117,10 @@ sub variables {
 
 	my ($ref, $insertions, $deletions) = @_;
 	my $output;
-	
+
+	# '-' in reference sequence is an insertion whereas in the alligned sequence it is a deletion
+	# To get the actual seq the lab put through sequencing must remove the - 
+	$ref =~ s/-//g;	
 	my @features = ($ref =~ m/..?/g);
 	
     if ($dels) {
@@ -123,7 +130,7 @@ sub variables {
     } else {
         $output = ($deletions*-1) + $insertions;
     }
-	print "$output\n";
+	#print "$output\n";
 
 	return @features, $output;
 	
