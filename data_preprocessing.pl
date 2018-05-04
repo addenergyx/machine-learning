@@ -215,7 +215,7 @@ sub variables {
 #  TTT Content : 1
 #  Minimum free energy prediction: -91.5
 
-	if (substr($sequence, 0, 1) eq '-'){$sequence =~ s/^-//}
+	#if (substr($sequence, 0, 1) eq '-'){$sequence =~ s/^-//}
 
 # Nucleotide count
 

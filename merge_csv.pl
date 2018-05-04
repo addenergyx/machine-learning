@@ -8,7 +8,6 @@ use File::Copy qw(copy);
 
 my @file;
 my $headers;
-my $tmp;
 
 foreach my $file (@ARGV) {
 	
