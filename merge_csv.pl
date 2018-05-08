@@ -1,10 +1,11 @@
 #! /usr/bin/perl
 
+# For classifcation must merge data before running preprocessing script, this is because each file would contain headers of different lengths due to varying sequence sizes. The classifaction script handles this and uses the longest sequence size as the header.
+# For regression run script on the data first then merge the files
+ 
+
 use strict;
 use warnings;
-
-use Text::CSV_XS;
-use File::Copy qw(copy);
 
 my @file;
 my $headers;
