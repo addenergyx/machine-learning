@@ -8,19 +8,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+file = 'classification_neural_network_Merged26.csv'
+
 #Importing dataset
-dataset = pd.read_csv('classification_neural_network_Example_ref_summary.csv')
+dataset = pd.read_csv(file)
 
 inputset = dataset.drop(dataset.columns[-1], axis=1)
 #change to true when add more data
 #Using one hot encoding to avoid dummy variable trap
-dataset2 = pd.get_dummies(inputset,drop_first=True)
-length_X = len(dataset2.columns) + 1
+inputset = pd.get_dummies(inputset,drop_first=True)
+length_X = len(inputset.columns) + 1
 
-outputset = pd.read_csv('classification_neural_network_Example_ref_summary.csv', names=['ins/dels'], header=0)
+outputset = pd.read_csv(file, names=['ins/dels'], header=0)
 
 #Input layer
-X = dataset2.iloc[: , 0:length_X].values
+X = inputset.iloc[: , 0:length_X].values
 #Output layer
 #Y = dataset.iloc[: , 112:113].values
 
@@ -30,21 +32,21 @@ input_dim = len(X[0])
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder, LabelBinarizer
 
 labelencoder_output = LabelEncoder()
-onehotencode = OneHotEncoder()
-binary = LabelBinarizer()
+#onehotencode = OneHotEncoder()
+#binary = LabelBinarizer()
 
 #one hot encoder does not work with negative numbers
 #en_y = binary.fit_transform(outputset)
 #in_y = binary.inverse_transform(en_y)
 
-Y_array = labelencoder_output.fit_transform(outputset)
+Y_vector = labelencoder_output.fit_transform(outputset)
 
-Y_array = Y_array.reshape(-1,1)
+Y_vector = Y_vector.reshape(-1,1)
 
 from keras.utils import np_utils
 
 # one-vs-all
-dummy_y = np_utils.to_categorical(Y_array)
+dummy_y = np_utils.to_categorical(Y_vector)
 
 #onehotencoder = OneHotEncoder()
 
