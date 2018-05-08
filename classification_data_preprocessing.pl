@@ -13,11 +13,6 @@ use Try::Tiny;
 GetOptions(
     'sample=s{1,}' => \my @raw_data,
     'output=s'     => \my $new_file,
-    'tabs'         => \my $tabs,
-    #'procs=i'      => \$procs,
-    'verbose'      => \my $verbose,
-    'ins'          => \my $ins,
-    'dels'         => \my $dels
 ) or die("Command line argument error\n");
 
 if (scalar @raw_data == 0){@raw_data = @ARGV}
@@ -58,7 +53,6 @@ OUTER: foreach my $current_file (@raw_data) {
 	
 	for (my $x = 0;  my $observation = $csv->getline_hr($data); $x++) {
 		
-$DB::single=1;
 		my $ref = $observation->{'Reference_Sequence'};
 		my $reads = $observation->{'#Reads'};
 		my $insertions = $observation->{'n_inserted'};
@@ -72,28 +66,19 @@ $DB::single=1;
 		foreach my $dinucleotide (@features) {
 			$i++;
 			$results->{$i} = $dinucleotide;
-### Temporary fix ###
-###if ($x == 0) {
-###				
 			push (@position, $i);			
-###}
 		}
 		$results->{$output_label} = $output;
-$DB::single=1;
 		for (my $y = 0; $y < $reads; $y++) {push @dataset, $results}
 
 		push (@list_of_positions, [@position]);
-### Temporary fix ###
-#if ($x == 0) {
-###
-#			push (@position, $output_label);
-#}
+
 		undef @position;
 		$results = {};
 		print "$x\n";
 	}
-$DB::single=1;	
 	foreach my $row (@list_of_positions) {
+		INFO "Searching data for longest sequence";
 		if (scalar @{$row} > scalar @position) {@position = @{$row}}	
 	}
 
@@ -112,14 +97,13 @@ $DB::single=1;
 
 }
 
-
 sub variables {
 
 	my ($ref, $insertions, $deletions) = @_;
 	my $output;
 
 	# '-' in reference sequence is an insertion whereas in the alligned sequence it is a deletion
-	# To get the actual seq the lab put through sequencing must remove the - 
+	# To get the actual seq the lab put through sequencing '-' must be removed from the ref seq 
 	$ref =~ s/-//g;	
 	my @features = ($ref =~ m/..?/g);
 	
