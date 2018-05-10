@@ -7,29 +7,32 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import gc
 
-file = 'classification_neural_network_Merged26.csv'
+filename = 'classification_neural_network_Merged26.csv'
 
 #Importing dataset
-dataset = pd.read_csv(file)
+dataset = pd.read_csv(filename)
+dataset = dataset.drop(dataset.columns[-1], axis=1)
 
-inputset = dataset.drop(dataset.columns[-1], axis=1)
-#change to true when add more data
-#Using one hot encoding to avoid dummy variable trap
-inputset = pd.get_dummies(inputset,drop_first=True)
-length_X = len(inputset.columns) + 1
+#Using one hot encoding with drop first columns to avoid dummy variable trap
+dataset = pd.get_dummies(dataset,drop_first=True)
+length_X = len(dataset.columns) + 1
 
-outputset = pd.read_csv(file, names=['ins/dels'], header=0)
+outputset = pd.read_csv(filename, names=['ins/dels'], header=0)
 
 #Input layer
-X = inputset.iloc[: , 0:length_X].values
+X = dataset.iloc[: , 0:length_X].values
+del dataset
+
 #Output layer
 #Y = dataset.iloc[: , 112:113].values
 
 input_dim = len(X[0])
 
 #Encoding pairs
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, LabelBinarizer
+from sklearn.preprocessing import LabelEncoder
+#OneHotEncoder, LabelBinarizer
 
 labelencoder_output = LabelEncoder()
 #onehotencode = OneHotEncoder()
@@ -40,6 +43,7 @@ labelencoder_output = LabelEncoder()
 #in_y = binary.inverse_transform(en_y)
 
 Y_vector = labelencoder_output.fit_transform(outputset)
+del outputset
 
 Y_vector = Y_vector.reshape(-1,1)
 
@@ -47,6 +51,7 @@ from keras.utils import np_utils
 
 # one-vs-all
 dummy_y = np_utils.to_categorical(Y_vector)
+del Y_vector
 
 #onehotencoder = OneHotEncoder()
 
@@ -64,9 +69,19 @@ dummy_y = np_utils.to_categorical(Y_vector)
 from sklearn.model_selection import train_test_split
 X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.3, random_state=42)
 
+# Number of catagories
+y_catagories = len(Y_test[0])
+#number of rows - outcome_size = len(Y_test)
+
+# delete references
+del X, dummy_y 
+
+#manually invoke garbage collection
+gc.collect()
+
 #Feature scaling
 '''
-#don't need to feature scale because all results are binary
+don't need to feature scale because all results are binary
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
 X_train = sc.fit_transform(X_train)
@@ -109,7 +124,7 @@ def build_classifier():
     
     #Output layer, Densely-connected NN layer
     #sigmoid vs softmax
-    classifier.add(Dense(units=4, kernel_initializer='uniform', activation='softmax'))
+    classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='softmax'))
     
     #Complie model
     # Categorical crossentropy didn't make sense, it should be a sum of 
@@ -126,11 +141,11 @@ date = strftime("%d-%m-%y")
 
 tensorboard = TensorBoard(log_dir='./logs/tensorboard/classification/' + date, histogram_freq=0, write_graph=True, write_images=True)
 
-classifier = KerasClassifier(build_fn=build_classifier, epochs=100, batch_size=10)
+classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=10000)
 
 kfold = KFold(n_splits=10, shuffle=True)
 
-results = cross_val_score(classifier, X, dummy_y, cv=kfold, n_jobs=1)
+results = cross_val_score(classifier, X_train, Y_train, cv=kfold, n_jobs=-1)
 print("Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 
 classifier.fit(X_train,Y_train, callbacks=[tensorboard])
@@ -146,6 +161,20 @@ y_pred = classifier.predict(X_test)
 #classes = classifier.classes_
 #from sklearn.metrics import confusion_matrix
 #cm = confusion_matrix(Y_test, y_pred)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
