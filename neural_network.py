@@ -4,31 +4,41 @@ home = expanduser("~")
 from time import strftime
 date = strftime("%d-%m-%y")
 import configargparse
+import gc
+
 #Command-Line Option and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
-config.add_argument('--config', is_config_file=True, help='config file path')
-config.add_argument('-c','--cpu', action="store", type=int, default=1, 
+config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
+config.add_argument('-c','--cpu', action="store", type=int, default=-1, 
                     help="The number of CPUs to use to do the computation (default: -1 'all CPUs')")
 config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/Neural_network_Example_summary.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
-config.add_argument('-t','--tensorboard', nargs='?', const=home + '/machine-learning/logs/tensorboard/regression' + date, 
+config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/logs/tensorboard/{1}_regression'.format(home, date), 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
 config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/%s_trained_model.h5" % date, help="Save model to disk")
-config.add_argument('-v','--verbose', action="store_true", help="Verbose")
+config.add_argument('-v','--verbose', action="store_true", help="Verbosity mode")
 config.add_argument('-p','--predict', nargs='+',
                     help="Sample data for model to make a prediction on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%%Reads. For example: 0 1 0 0 68 77 39 94 68 2 1 -106.400001525879 26 278 0 1684 34.9885726158")
 config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/03-05-18_best_model.h5', help="Path to saved model", nargs='?')
+config.add_argument('-b', '--batch', nargs='?', const=home + '/machine-learning/smallsamplefiles', 
+                    help="Path to directory containing multiple files with data in the correct format. Default: ~/machine-learning/smallsamplefiles/")
 
+# Configuration variables
 options = config.parse_args()
+
 n_cpu = options.cpu
 sample = options.sample
 path_to_tensorboard = options.tensorboard
 verbose = options.verbose
 cp = options.save
 user_observation = options.predict
-#load = options.load
 saved_model = options.load
+path_to_batch = options.batch
+
+if (path_to_batch is not None and sample is not None ):
+    # Batch will override sample
+    sample = None
 
 print("\n")
 print(options)
@@ -45,79 +55,81 @@ import pandas as pd
 from time import strftime
 #from turicreate import SFrame
 
-#Importing dataset
-dataset = pd.read_csv(sample)
-
-#Drop aligned sequence
-#dataset = dataset.drop(dataset.columns[0], axis=1)
-
-#Column names
-header = list(dataset)
-
-#Looking into sframe as an alternative to pandas, has s3 support
-#Tensorflow also has s3 and GCP support if you install from source and enable it
-#sf = SFrame(data=dataset)
-#sf.explore()
-
-#Length of input, will be used when building model
-input_dim = len(dataset.columns) - 1
-
-#Input layer
-X = dataset.iloc[: , 0:input_dim].values
-#Output layer
-Y = dataset.iloc[: , input_dim:(input_dim + 1)].values
-
-#Encoding categorical data
-from sklearn.preprocessing import LabelEncoder
-
-#Encoding values, assigning each catagory a number
-
-#Encoding NHEJ
-labelencoder_nhej = LabelEncoder()
-X[:,1] = labelencoder_nhej.fit_transform(X[:,1])
-
-#Encoding UNMODIFIED
-labelencoder_unmodified = LabelEncoder()
-X[:,2] = labelencoder_unmodified.fit_transform(X[:,2])
-
-#Encoding frameshift
-labelencoder_frameshift = LabelEncoder()
-X[:,15] = labelencoder_frameshift.fit_transform(X[:,15])
-
-#Encoding HDR
-labelencoder_hdr = LabelEncoder()
-X[:,3] = labelencoder_hdr.fit_transform(X[:,3])
-
-#Spliting dataset into training and test set
-from sklearn.model_selection import train_test_split
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-
-#real_input = X_test
-
-#Feature scaling -1 to +1 because there will be alot of parallel computations
-#can use standardisation or normalisation
-from sklearn.preprocessing import StandardScaler
-sc = StandardScaler()
-
-#Dropping aligned sequence here instead of at the beginning so it can later be
-#appened to prediction table
-test_aligned_sequence, X_test = X_test[:,0],X_test[:,1:input_dim]
-X_train = np.delete(X_train,0,1)
-
-#Must fit object to training set then transform it
-X_train = sc.fit_transform(X_train)
-
-#Scaled on same basis as X_train because of sc, however not influenced by training data range 
-X_test = sc.transform(X_test)
-
-"""Algorithm will converge much faster with feature scalling
-Don't need to apply feature scaling on Y if it's a classifaction problem with a 
-catagorical dependent variable. Will need to apply feature scaling in a regression output"""
-
-"""Use alot of objects so in the future it would be easy to implement a different algorithm
-Would only need to change this library"""
-
-import keras 
+def build_data(sample):
+    #Importing dataset
+    dataset = pd.read_csv(sample, error_bad_lines=False)
+    
+    #Drop aligned sequence
+    #dataset = dataset.drop(dataset.columns[0], axis=1)
+    
+    #Column names
+    headers = list(dataset)
+    
+    #Looking into sframe as an alternative to pandas, has s3 support
+    #Tensorflow also has s3 and GCP support if you install from source and enable it
+    #sf = SFrame(data=dataset)
+    #sf.explore()
+    
+    #Length of input, will be used when building model
+    input_dim = len(dataset.columns) - 1
+    
+    #Input layer
+    X = dataset.iloc[: , 0:input_dim].values
+    #Output layer
+    Y = dataset.iloc[: , input_dim:(input_dim + 1)].values
+    
+    del dataset
+    
+    #Encoding categorical data
+    from sklearn.preprocessing import LabelEncoder
+    
+    #Encoding values, assigning each catagory a number
+    
+    #Encoding NHEJ
+    labelencoder = LabelEncoder()
+    X[:,1] = labelencoder.fit_transform(X[:,1])
+    
+    #Encoding UNMODIFIED
+    X[:,2] = labelencoder.fit_transform(X[:,2])
+    
+    #Encoding frameshift
+    X[:,15] = labelencoder.fit_transform(X[:,15])
+    
+    #Encoding HDR
+    X[:,3] = labelencoder.fit_transform(X[:,3])
+    
+    #Spliting dataset into training and test set
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
+    
+    del X, Y
+    gc.collect()
+    
+    #real_input = X_test
+    
+    #Feature scaling -1 to +1 because there will be alot of parallel computations
+    #can use standardisation or normalisation
+    from sklearn.preprocessing import StandardScaler
+    sc = StandardScaler()
+    
+    #Dropping aligned sequence here instead of at the beginning so it can later be
+    #appened to prediction table
+    test_aligned_sequence, X_test = X_test[:,0],X_test[:,1:input_dim]
+    X_train = np.delete(X_train,0,1)
+    
+    #Must fit object to training set then transform it
+    X_train = sc.fit_transform(X_train)
+    
+    #Scaled on same basis as X_train because of sc, however not influenced by training data range 
+    X_test = sc.transform(X_test)
+    
+    """Algorithm will converge much faster with feature scalling
+    Don't need to apply feature scaling on Y if it's a classifaction problem with a 
+    catagorical dependent variable. Will need to apply feature scaling in a regression output"""
+    
+    """Use alot of objects so in the future it would be easy to implement a different algorithm
+    Would only need to change this library"""
+    return X_test, Y_test, input_dim, X_train, Y_train, test_aligned_sequence, headers, sc
 
 #Initialises Neural Network
 from keras.models import Sequential
@@ -144,7 +156,7 @@ The function would need to take (y_true, y_pred) as arguments and return a singl
 def root_mean_squared_error(y_true, y_pred):
     return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
 
-def visualisation(y_pred,Y_test):
+def visualisation(y_pred, Y_test, y_difference):
     #print(history.history.keys())
     
     if saved_model is None:
@@ -170,7 +182,7 @@ def visualisation(y_pred,Y_test):
     plt.legend(['Actual', 'Predicted'], loc='best')
     plt.show()
 
-    plt.title('Predicted results vs Actual results')
+    plt.title('Difference predicted results and actual results')
     plt.plot(y_difference)
     plt.show()
     return
@@ -181,13 +193,14 @@ if saved_model is not None:
     model = load_model(saved_model, custom_objects={'root_mean_squared_error': root_mean_squared_error })
     print("Loading model %s from disk" % saved_model)
     model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
+    X_test, Y_test = build_data(sample)[0:2]
     score = model.evaluate(X_test, Y_test, verbose=verbose)
     print("%s: %.2f" % (model.metrics_names[1], score[1]))
     
     #predict
     y_pred = model.predict(X_test)
     y_difference = np.subtract(y_pred, Y_test)
-    visualisation(y_pred,Y_test)
+    visualisation(y_pred,Y_test, y_difference)
     
 else:
 #Neural Network architecture
@@ -197,18 +210,18 @@ else:
         regressor = Sequential()
 
         #Input layer and first hidden layer with dropout
-        regressor.add(Dense(units=9, kernel_initializer='uniform',activation='relu',input_dim=input_dim - 1 ))
+        regressor.add(Dense(units=10, kernel_initializer='uniform',activation='relu',input_dim=input_dim - 1 ))
 
         """General tip for the number of nodes in the input layer is that it should be the
         average of the number of nodes in the input and output layer. However this may
         be changed later when parameter tuning using cross validation"""
-        #regressor.add(Dropout(rate=0.1))
+        regressor.add(Dropout(rate=0.1))
 
         #Hidden layer 2 with dropout
-        regressor.add(Dense(units=9, kernel_initializer='uniform', activation='relu'))
+        regressor.add(Dense(units=10, kernel_initializer='uniform', activation='relu'))
         """Rectifer function is good for hidden layers and sigmoid function good for output
         layers. Uniform initialises the weights randomly to small numbers close to 0"""
-        #regressor.add(Dropout(rate=0.1))
+        regressor.add(Dropout(rate=0.1))
 
         #Output layer, Densely-connected NN layer
         regressor.add(Dense(units=1, kernel_initializer='uniform'))
@@ -220,22 +233,7 @@ else:
         regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
 
         return regressor
-
-
-    model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
-
-    #Accuracy is the 10 accuracies returned by k-fold cross validation
-    #Most of the time k=10
-    from sklearn.model_selection import KFold
-    kfold = KFold(n_splits=10, shuffle=True)
-
-    accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
-    #n_jobs is number of cpu's, -1 is all
-
-    #Mean accuracies and variance
-    loss_mean = accuracy.mean()
-    loss_variance = accuracy.std()
-
+    
     #Callbacks
     from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint
 
@@ -254,20 +252,89 @@ else:
     #Python doesn't have switch statements so will use a dictionary later
     if path_to_tensorboard and not cp:
         callbacks=[history, tensorboard, terminate_on_nan]
+        print("\n----------")
+        print("Saving tensorboard to {0}".format(path_to_tensorboard))
+        print("----------\n")
     elif cp and not path_to_tensorboard:
         callbacks=[history, terminate_on_nan, Checkpoint]
+        print("\n----------")
+        print("Saving model to {0}".format(cp))
+        print("----------\n")
     elif path_to_tensorboard and cp:
         callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
+        print("\n----------")
+        print("Saving model to {0}\nTensorboard to {1}".format(cp,path_to_tensorboard))
+        print("----------\n")
     else:
         callbacks=[history, terminate_on_nan]
+
+    def generate_batches(files, path_to_batch):
+        counter = 0
+        # This line is just to make the generator infinite, keras needs this
+        while True:
+            sample = files[counter]
+            sample = path_to_batch + sample
+            print(sample)
+            counter = (counter + 1) % len(files)            
+            
+            # This method would require calling build_data() multiple times wasting cpu
+            #X_train, Y_train = build_data(sample)[3:5]
+            
+            build = build_data(sample)
+            X_train = build[3]
+            Y_train = build[4]
+
+            yield (X_train, Y_train)
     
-    #Have to fit data to model again after cross validation
-    history = model.fit(X_train, Y_train, callbacks=callbacks)
+    # Keras's scikit-learn wrapper doesn't work with fit_generator so had to separate them
+    if path_to_batch is not None:
+        # Files in batch
+        from os import listdir
+        files = listdir(path_to_batch)
+        
+        import random
+        random.shuffle(files)
+        
+        #Build model
+        model = build_regressor()
+        
+        #Fit model to generated data
+        '''When dealing with large data best approach is to add the data to the model sequentially therefore onlt storing one file
+        to memory at a time. It was not possible to merge the data into one file and run the model since memory would continue to increase
+        during training. classification_neural_network_Merged26.csv is 734MB but used 14.2GB in memory when put into dataset variable'''
+        history = model.fit_generator(generate_batches(files, path_to_batch),steps_per_epoch=10, epochs=100, callbacks=callbacks)
+        
+    else:    
+        #Build data
+        X_test, Y_test, input_dim, X_train, Y_train, test_aligned_sequence, headers, sc = build_data(sample)
+        
+        #Build Model
+        model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
+
+        #Accuracy is the 10 accuracies returned by k-fold cross validation
+        #Most of the time k=10
+        from sklearn.model_selection import KFold
+        kfold = KFold(n_splits=10, shuffle=True)
+        
+        #Cross Validation
+        accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
+
+        #Mean accuracies and variance
+        loss_mean = accuracy.mean()
+        loss_mean = loss_mean*(-1)
+        loss_variance = accuracy.std()
+        print("\n----------\n")
+        print("Cross Validation Results\nAverage loss: {0}\nloss function variance: {1}".format(loss_mean,loss_variance))
+        print("\n----------\n")
+        input("Press Enter to continue...")
+
+        #Have to fit data to model again after cross validation
+        history = model.fit(X_train, Y_train, callbacks=callbacks)
 
     #Prediction on test data, needed to reshape array to subtract element wise
     y_pred = model.predict(X_test).reshape(-1,1)
     y_difference = np.subtract(y_pred, Y_test)
-    visualisation(y_pred,Y_test)
+    visualisation(y_pred,Y_test, y_difference)
 
 from math import sqrt
 
@@ -299,12 +366,12 @@ if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
 #Building complete prediction table
-def build_csv(test_aligned_sequence):
+def build_csv(test_aligned_sequence, sc):
     inverse_x = sc.inverse_transform(X_test)
     test_aligned_sequence = np.reshape(test_aligned_sequence, (-1,1))
     pred_set = np.concatenate((test_aligned_sequence,inverse_x,Y_test,y_pred),axis=1)
-    header.append('Prediction')
-    frame = pd.DataFrame(pred_set, columns=header)
+    headers.append('Prediction')
+    frame = pd.DataFrame(pred_set, columns=headers)
     print(frame.to_string())
     return frame
 
@@ -315,7 +382,7 @@ if cp:
     print("\n----------\n")
     input("Press Enter to continue...")
 
-    frame = build_csv(test_aligned_sequence)
+    frame = build_csv(test_aligned_sequence, sc)
     print("\n----------\n")
     save_csv = input("Do you wish to save csv of data? [Y/N] ")
 
@@ -323,6 +390,14 @@ if cp:
         default = '{0}/machine-learning/predictions/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
+
+
+
+
+
+
+
+
 
 
 
