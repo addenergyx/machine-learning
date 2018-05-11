@@ -6,13 +6,19 @@
 # override defaults
 
 # Number of cpus the program should use
-# Sometimes the program craches when using more than 1 cpu. To avoid this source setup.sh before 
-# running the neural net 
-cpu: 1
+# Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cpu. 
+# To avoid this source setup.sh before running the neural net or change cpu to 1 
+cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
-# Make sure the data preprocessing script has been run on this file beforehand
-sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
+# Make sure the data preprocessing script has been run on the file beforehand
+sample: ~/machine-learning/merged_data/Miseq_20-26_data.csv 
+#~/machine-learning/csv/Neural_network_Example_summary.csv
+
+# Path to directory of the files for example '/machine-learning/smallsamplefiles/'
+# Use batch instead of 'sample' if you want to analyse multiple files in the same model
+# Batch flag will override sample flag 
+#batch: /home/ubuntu/machine-learning/smallsamplefiles/
 
 # Path to save model (Default: ~/machine-learning/snapshots/{date}_trained_model.h5)
 #save:
@@ -22,9 +28,11 @@ sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
 # False,True,False,0,68,77,39,94,68,2,1,-106.400001525879,26,278,False,1684,34.9885726158,0  
 #predict: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.9885726158
 
-# Load an existing model (Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5)
+# Load an existing model 
+# Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
 #load: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
 
-# Path of dir to save tensorboard of new model (Default:/home/ubuntu/machine-learning/logs/tensorboard/regression/{date})
+# Path of dir to save tensorboard of new model 
+# Default:/home/ubuntu/machine-learning/logs/tensorboard/regression/{date}
 # When the model finishes program will automatically open tensorboard in the browser
 #tensorboard:
