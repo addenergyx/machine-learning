@@ -7,13 +7,13 @@
 
 # Number of cpus the program should use
 # Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cpu. 
-# To avoid this source setup.sh before running the neural net or change cpu to 1 
+# To avoid this source setup.sh before running the neural net, change cpu to 1 or comment out code relating to cross validation (lines 374 - 383 in neural_network.py)
 cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: ~/machine-learning/merged_data/Miseq_20-26_data.csv 
-#~/machine-learning/csv/Neural_network_Example_summary.csv
+sample: ~/machine-learning/merged_data/Miseq26_data.csv 
+#sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
 # Use batch instead of 'sample' if you want to analyse multiple files in the same model
