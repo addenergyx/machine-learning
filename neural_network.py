@@ -37,7 +37,7 @@ saved_model = options.load
 path_to_batch = options.batch
 
 if (path_to_batch is not None and sample is not None ):
-    # Batch will override sample
+    # Batch flag will override sample
     sample = None
 
 print("\n")
@@ -102,6 +102,7 @@ def build_data(sample):
     from sklearn.model_selection import train_test_split
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
     
+    #Deleting references and manually invoke garbage collection to save as much memory as possible
     del X, Y
     gc.collect()
     
@@ -198,6 +199,9 @@ if saved_model is not None:
     print("%s: %.2f" % (model.metrics_names[1], score[1]))
     
     #predict
+    '''Currently this part is written twice (once for each model). Should look into having
+    this outside the if/else so it runs for both at the end therefore not repeating code.
+    Line 364-366'''
     y_pred = model.predict(X_test)
     y_difference = np.subtract(y_pred, Y_test)
     visualisation(y_pred,Y_test, y_difference)
@@ -215,13 +219,13 @@ else:
         """General tip for the number of nodes in the input layer is that it should be the
         average of the number of nodes in the input and output layer. However this may
         be changed later when parameter tuning using cross validation"""
-        regressor.add(Dropout(rate=0.1))
+        #regressor.add(Dropout(rate=0.1))
 
         #Hidden layer 2 with dropout
         regressor.add(Dense(units=10, kernel_initializer='uniform', activation='relu'))
         """Rectifer function is good for hidden layers and sigmoid function good for output
         layers. Uniform initialises the weights randomly to small numbers close to 0"""
-        regressor.add(Dropout(rate=0.1))
+        #regressor.add(Dropout(rate=0.1))
 
         #Output layer, Densely-connected NN layer
         regressor.add(Dense(units=1, kernel_initializer='uniform'))
@@ -240,7 +244,7 @@ else:
     #Save loss function progress
     history = History()
 
-    #Model stops if loss function is nan
+    #Model stops if loss function is nan, this happens when there is missing data
     terminate_on_nan = TerminateOnNaN()
     
     #Save model
@@ -248,7 +252,8 @@ else:
 
     #Create tensorboard
     tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
-
+    
+    '''
     #Python doesn't have switch statements so will use a dictionary later
     if path_to_tensorboard and not cp:
         callbacks=[history, tensorboard, terminate_on_nan]
@@ -267,7 +272,44 @@ else:
         print("----------\n")
     else:
         callbacks=[history, terminate_on_nan]
+    '''       
+        
+    def tensorboard_callback():
+        callbacks=[history, tensorboard, terminate_on_nan]
+        print("\n----------")
+        print("Saving tensorboard to {0}".format(path_to_tensorboard))
+        print("----------\n")
+        return callbacks
+    
+    def checkpoint_callback():
+        callbacks=[history, terminate_on_nan, Checkpoint]
+        print("\n----------")
+        print("Saving model to {0}".format(cp))
+        print("----------\n")
+        return callbacks
+    
+    def both_callback():
+        callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
+        print("\n----------")
+        print("Saving model to {0}\nSaving tensorboard to {1}".format(cp,path_to_tensorboard))
+        print("----------\n")
+        return callbacks
+    
+    def no_callback():
+        callbacks=[history, terminate_on_nan]
+        return callbacks
 
+    callbacks_dict = {
+            path_to_tensorboard and cp is None                         : tensorboard_callback,
+            cp and path_to_tensorboard is None                         : checkpoint_callback,
+            all (var is not None for var in [path_to_tensorboard, cp]) : both_callback,
+            not path_to_tensorboard and not cp                         : no_callback
+            }
+
+    def switch_case_callbacks(x):
+        return callbacks_dict[x]()
+        
+        
     def generate_batches(files, path_to_batch):
         counter = 0
         # This line is just to make the generator infinite, keras needs this
@@ -299,23 +341,39 @@ else:
         model = build_regressor()
         
         #Fit model to generated data
-        '''When dealing with large data best approach is to add the data to the model sequentially therefore onlt storing one file
+        '''When dealing with large data that can not fit into memory the best approach is to add the data to the model sequentially therefore only storing one file
         to memory at a time. It was not possible to merge the data into one file and run the model since memory would continue to increase
-        during training. classification_neural_network_Merged26.csv is 734MB but used 14.2GB in memory when put into dataset variable'''
-        history = model.fit_generator(generate_batches(files, path_to_batch),steps_per_epoch=10, epochs=100, callbacks=callbacks)
+        during training. classification_neural_network_Merged26.csv is 734MB but used 14.2GB in memory when put into the 'dataset' variable.
+        This is because '''
+        history = model.fit_generator(generate_batches(files, path_to_batch),steps_per_epoch=10, epochs=100, callbacks=switch_case_callbacks(x=True))
         
     else:    
         #Build data
         X_test, Y_test, input_dim, X_train, Y_train, test_aligned_sequence, headers, sc = build_data(sample)
         
+        
+        # According to Prof. Andrew Ng Coursera Course (Understanding mini-batch gradient descent) 
+        # typically batch sizes are 64, 128, 256, 512 and 1024 (Powers of two)
+
+        # Dictionaries are quickier than if statements and better optimized
+        batch_dict = {
+                (10000 > len(X_train) >= 5000): 512,
+                (len(X_train) >= 10000)       : 1024,
+                (len(X_train) < 5000)         : 10          
+                }
+        
+        def switch_case_batch(x):
+            return batch_dict.get(x)
+        
         #Build Model
-        model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=10 )
+        model = KerasRegressor(build_fn=build_regressor, epochs=100, batch_size=switch_case_batch(x=True))
 
         #Accuracy is the 10 accuracies returned by k-fold cross validation
         #Most of the time k=10
         from sklearn.model_selection import KFold
         kfold = KFold(n_splits=10, shuffle=True)
         
+        ''' 
         #Cross Validation
         accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
 
@@ -327,15 +385,28 @@ else:
         print("Cross Validation Results\nAverage loss: {0}\nloss function variance: {1}".format(loss_mean,loss_variance))
         print("\n----------\n")
         input("Press Enter to continue...")
-
+        '''
+        
         #Have to fit data to model again after cross validation
-        history = model.fit(X_train, Y_train, callbacks=callbacks)
+        history = model.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
 
     #Prediction on test data, needed to reshape array to subtract element wise
     y_pred = model.predict(X_test).reshape(-1,1)
     y_difference = np.subtract(y_pred, Y_test)
-    visualisation(y_pred,Y_test, y_difference)
+    abs_pred = np.absolute(y_difference) 
+    
+    max_index, max_value = max(enumerate(abs_pred), key=lambda p: p[1])
+    
+    accuracy = ((np.sum(abs_pred <= 0.5)/len(Y_test))*100)
+    mean_accuracy = y_difference.mean()
 
+    visualisation(y_pred,Y_test, y_difference)
+      
+    #The closer to 0 the better the model
+    print("Average model Accuracy: {0}".format(mean_accuracy))
+    print("Largest difference is {0:.2f} at position {1}\nModel predicted {2:.2f} whereas actual result was {3}".format(float(max_value), max_index, float(y_pred[max_index]), int(Y_test[max_index])))
+    print("Model Performance: {0:.2f}%\nNumber of correct results (+/- 0.5): {1}/{2}".format(accuracy, np.sum(abs_pred <= 0.5), len(Y_test)))
+    
 from math import sqrt
 
 #Results variance and mean, best possible score is 1.0 for variance
@@ -390,17 +461,6 @@ if cp:
         default = '{0}/machine-learning/predictions/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
