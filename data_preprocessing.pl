@@ -27,7 +27,7 @@ use Text::CSV::Separator qw(get_separator);
 #my @raw_data = 'csv/Example_summary.csv'; 
 # To allow the user to enter their own csv file and output file. CSV must be in the same schema as default
 
-# By default the program will run 1 process per cpu. This is because if parallel processes are competing for I/O bandwidth to keep reloading their data, they'll run slower than if they are ra sequentially.
+# By default the script will run 1 process per cpu. This is because if parallel processes are competing for I/O bandwidth to keep reloading their data, they'll run slower than if they are ra sequentially.
 my $procs = `nproc --all`;
 
 GetOptions(
@@ -37,7 +37,8 @@ GetOptions(
 	'verbose'	   => \my $verbose,
 	'force'		   => \my $force,
 	'ins'		   => \my $ins,
-	'dels'		   => \my $dels	
+	'dels'		   => \my $dels,
+	'multivariate' => \my $multivariate
 ) or die("Command line argument error\n");
 
 #my $total = 0;
@@ -46,7 +47,6 @@ my $pm = Parallel::ForkManager->new($procs);
 
 $pm->run_on_finish( sub {
 	my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data_structure_reference) = @_;
-#$DB::single=1;
 		INFO "Process has finshed (pid:$pid)\n";
 		INFO "$data_structure_reference->{observations} observations have been created in file '$data_structure_reference->{new_file}'\n"; 
 });
@@ -60,17 +60,14 @@ OUTER: foreach my $current_file (@raw_data) {
 
 # To differentiate the labs csv from the one used for the neural network 'NN' will be concatenated to the beginning of the filename unless stated otherwise using the 'output' flag
 
-### NEED TO FIX ###
-#if (! defined $new_file) {
-	if ($ins) {
-		$new_file = 'Neural_network_insertions_' . $current_file;
-	} elsif ($dels) {
-		$new_file = 'Neural_network_deletions_' . $current_file;
-	} else  {
-		$new_file = 'Neural_network_' . $current_file;
+	if (! defined $new_file) {
+		if ($ins) { $new_file = 'insertions_dataset_' . $current_file; } 
+		elsif ($dels) { $new_file = 'deletions_dataset_' . $current_file; } 
+		elsif ($multivariate) { $new_file = 'multivariate_dataset_' . $current_file; }
+		else { $new_file = 'neural_network_' . $current_file; }
 	}
-#}
 
+### NEED TO FIX ###
 # STDIN doesn't work properlly with forking
 #my $exit = 0;
 #if (! defined $force) {
@@ -128,13 +125,22 @@ OUTER: foreach my $current_file (@raw_data) {
 	my $new_features = [q/a_count/,q/c_count/,q/t_count/,q/g_count/,q/gc_content/,q/tga_count/,q/ttt_count/,q/minimum_free_energy_prediction/,q/pam_count/,q/length/,q/frameshift/,$output_label];
 
 # Although the amplicon is not needed for the neural network I am going to include it in this new csv as the lab may need it for reference. The neural network will ignore this column.
-	my @dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
-$csv->column_names( @{ $headers} );
 
+	my @dataset_header; 
+
+	if (defined $multivariate) {
+		@dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{ $headers}[4,5]);
+	} else {
+		@dataset_header =  $csv->column_names( @{ $headers}[0..3], @{ $headers}[6], @{$new_features}[0..10], @{$headers}[7,8], @{$new_features}[11] );
+	}
+	
+	$csv->column_names( @{ $headers} );
+
+	INFO "Building data from '$current_file'...";
+	
 	LOOP: while (my $observation = $csv->getline_hr($data)) {	
-		if (scalar keys %{$observation} == 9){
+		if (scalar keys %{$observation} == 9) {
 
-			INFO "Building data from '$current_file'";
 			my $sequence = $observation->{'Aligned_Sequence'};
 			my $insertions = $observation->{'n_inserted'};
 			my $deletions = $observation->{'n_deleted'};
@@ -152,9 +158,6 @@ $csv->column_names( @{ $headers} );
 				NHEJ => $observation->{'NHEJ'},
 				UNMODIFIED => $observation->{'UNMODIFIED'},
 				HDR => $observation->{'HDR'},
-				#n_deleted => $observation->{'n_deleted'},
-				#n_inserted => $observation->{'n_inserted'},
-				# Also removed n deleted/inserted from @dataset_header
 				n_mutated => $observation->{'n_mutated'},
 				@{$new_features}[0] => $features[0],
 				@{$new_features}[1] => $features[1],
@@ -169,8 +172,14 @@ $csv->column_names( @{ $headers} );
 				@{$new_features}[8] => $features[8],
 				@{$new_features}[9] => $features[9],
 				@{$new_features}[10] => $features[10],
-				@{$new_features}[11] => $features[11],
 			};
+
+				if (defined $multivariate) {
+					$results->{'n_inserted'} = $observation->{'n_inserted'};
+					$results->{'n_deleted'} = $observation->{'n_deleted'};
+				} else { 
+					$results->{@{$new_features}[11]} = $features[11];
+				}
 
 			push (@dataset, $results);
 		
@@ -194,6 +203,7 @@ $csv->column_names( @{ $headers} );
 		warn "Caught error: $_";
 	};
 	close $out;
+	# Callbacks
 	$pm->finish(0, {current_file => $current_file, new_file => $new_file, observations => scalar @dataset}); # Terminates child process
 #undef ($new_file);
 }
