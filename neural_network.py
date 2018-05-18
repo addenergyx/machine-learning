@@ -4,7 +4,6 @@ home = expanduser("~")
 from time import strftime
 date = strftime("%d-%m-%y")
 import configargparse
-import gc
 
 #Command-Line Option and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
@@ -23,6 +22,7 @@ config.add_argument('-p','--predict', nargs='+',
 config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/03-05-18_best_model.h5', help="Path to saved model", nargs='?')
 config.add_argument('-b', '--batch', nargs='?', const=home + '/machine-learning/smallsamplefiles', 
                     help="Path to directory containing multiple files with data in the correct format. Default: ~/machine-learning/smallsamplefiles/")
+config.add_argument('-m','--multivariate', action="store_true", help="Multivariance mode")
 
 # Configuration variables
 options = config.parse_args()
@@ -35,6 +35,7 @@ cp = options.save
 user_observation = options.predict
 saved_model = options.load
 path_to_batch = options.batch
+multivariate = options.multivariate
 
 if (path_to_batch is not None and sample is not None ):
     # Batch flag will override sample
@@ -53,38 +54,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from time import strftime
-#from turicreate import SFrame
+from turicreate import SFrame
+#import csv
+#from csvvalidator import *
 
 def build_data(sample):
     #Importing dataset
     dataset = pd.read_csv(sample, error_bad_lines=False)
-    
+
     #Drop aligned sequence
     #dataset = dataset.drop(dataset.columns[0], axis=1)
     
     #Column names
     headers = list(dataset)
     
-    #Looking into sframe as an alternative to pandas, has s3 support
-    #Tensorflow also has s3 and GCP support if you install from source and enable it
-    #sf = SFrame(data=dataset)
-    #sf.explore()
-    
     #Length of input, will be used when building model
-    input_dim = len(dataset.columns) - 1
-    
+    input_dim = len(headers) - (3 if multivariate else 2) 
+            
     #Input layer
-    X = dataset.iloc[: , 0:input_dim].values
+    X = dataset.iloc[:, 0:input_dim + 1].values
+            
     #Output layer
-    Y = dataset.iloc[: , input_dim:(input_dim + 1)].values
-    
-    del dataset
-    
+    Y = dataset.iloc[:, input_dim + 1:20].values if multivariate else dataset.iloc[: , (input_dim + 1):(input_dim + 2)].values 
+            
     #Encoding categorical data
     from sklearn.preprocessing import LabelEncoder
     
     #Encoding values, assigning each catagory a number
-    
+        
     #Encoding NHEJ
     labelencoder = LabelEncoder()
     X[:,1] = labelencoder.fit_transform(X[:,1])
@@ -101,13 +98,7 @@ def build_data(sample):
     #Spliting dataset into training and test set
     from sklearn.model_selection import train_test_split
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-    
-    #Deleting references and manually invoke garbage collection to save as much memory as possible
-    del X, Y
-    gc.collect()
-    
-    #real_input = X_test
-    
+        
     #Feature scaling -1 to +1 because there will be alot of parallel computations
     #can use standardisation or normalisation
     from sklearn.preprocessing import StandardScaler
@@ -115,7 +106,8 @@ def build_data(sample):
     
     #Dropping aligned sequence here instead of at the beginning so it can later be
     #appened to prediction table
-    test_aligned_sequence, X_test = X_test[:,0],X_test[:,1:input_dim]
+    # input_dim or input_dim + 1
+    test_aligned_sequence, X_test = X_test[:,0],X_test[:,1:input_dim + 1]
     X_train = np.delete(X_train,0,1)
     
     #Must fit object to training set then transform it
@@ -131,6 +123,24 @@ def build_data(sample):
     """Use alot of objects so in the future it would be easy to implement a different algorithm
     Would only need to change this library"""
     return X_test, Y_test, input_dim, X_train, Y_train, test_aligned_sequence, headers, sc
+
+#Building complete prediction table
+def build_csv(test_aligned_sequence, sc):
+    inverse_x = sc.inverse_transform(X_test)
+    test_aligned_sequence = np.reshape(test_aligned_sequence, (-1,1))
+    pred_set = np.concatenate((test_aligned_sequence,inverse_x,Y_test,y_pred),axis=1)
+    
+    if multivariate:
+       if "Insertion prediction" and "Deletion prediction" not in headers:
+           headers.append('Deletion prediction')
+           headers.append('Insertion prediction')
+    else:
+        if "Prediction" not in headers:    
+            headers.append('Prediction')
+    
+    frame = pd.DataFrame(pred_set, columns=headers)
+    #print(frame.to_string())
+    return frame
 
 #Initialises Neural Network
 from keras.models import Sequential
@@ -157,8 +167,16 @@ The function would need to take (y_true, y_pred) as arguments and return a singl
 def root_mean_squared_error(y_true, y_pred):
     return k.sqrt(k.mean(k.square(y_pred - y_true), axis=-1))
 
-def visualisation(y_pred, Y_test, y_difference):
+def visualisation(y_pred, Y_test, y_difference, filename='vis.html'):
     #print(history.history.keys())
+    
+    #Big datasets are not represented by the graph very well so will only show first
+    # 2000 results
+    
+    if len(y_difference) > 2000:
+        y_pred = y_pred[0:2000]
+        Y_test = Y_test[0:2000]
+        y_difference = y_difference[0:2000]
     
     if saved_model is None:
         plt.title('Model accuracy (RMSE)')
@@ -183,9 +201,20 @@ def visualisation(y_pred, Y_test, y_difference):
     plt.legend(['Actual', 'Predicted'], loc='best')
     plt.show()
 
-    plt.title('Difference predicted results and actual results')
+    plt.title('Difference between predicted results and actual results')
     plt.plot(y_difference)
     plt.show()
+    
+    from bokeh.plotting import figure, output_file, show
+    # output to static HTML file
+    output_file(filename)
+    # create a new plot with a title and axis labels
+    p = figure(title="simple line example", x_axis_label='x', y_axis_label='y')
+    # add a line renderer with legend and line thickness
+    p.line(range(len(y_difference)), np.ravel(y_difference), legend="Temp.", line_width=2)
+    # show the results
+    show(p)
+    
     return
 
 if saved_model is not None:
@@ -204,31 +233,48 @@ if saved_model is not None:
     Line 364-366'''
     y_pred = model.predict(X_test)
     y_difference = np.subtract(y_pred, Y_test)
-    visualisation(y_pred,Y_test, y_difference)
+    
+    if multivariate:
+        visualisation(y_pred=y_pred[:,0].reshape(-1,1),Y_test=Y_test[:,0].reshape(-1,1), y_difference=y_difference[:,0].reshape(-1,1))
+        visualisation(y_pred=y_pred[:,1].reshape(-1,1),Y_test=Y_test[:,1].reshape(-1,1), y_difference=y_difference[:,1].reshape(-1,1))
+    else:
+        visualisation(y_pred,Y_test, y_difference)
+    
+    #Looking into sframe as an alternative to pandas, has s3 support
+    #Tensorflow also has s3 and GCP support if you install from source and enable it
+    sf = SFrame(build_csv(build_data(sample)[5], build_data(sample)[7]))
+    sf.explore()
+    sf.show()
     
 else:
 #Neural Network architecture
+    
     def build_regressor():
 
         #Initialising neural network
         regressor = Sequential()
 
         #Input layer and first hidden layer with dropout
-        regressor.add(Dense(units=10, kernel_initializer='uniform',activation='relu',input_dim=input_dim - 1 ))
+        regressor.add(Dense(units=10, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
 
         """General tip for the number of nodes in the input layer is that it should be the
         average of the number of nodes in the input and output layer. However this may
         be changed later when parameter tuning using cross validation"""
-        #regressor.add(Dropout(rate=0.1))
+        regressor.add(Dropout(rate=0.1))
 
         #Hidden layer 2 with dropout
         regressor.add(Dense(units=10, kernel_initializer='uniform', activation='relu'))
         """Rectifer function is good for hidden layers and sigmoid function good for output
         layers. Uniform initialises the weights randomly to small numbers close to 0"""
-        #regressor.add(Dropout(rate=0.1))
+        regressor.add(Dropout(rate=0.1))
 
         #Output layer, Densely-connected NN layer
-        regressor.add(Dense(units=1, kernel_initializer='uniform'))
+        #ReLU layer is a Linear layer that converts all negative values to 0.
+        #This is necessary for multivariate model as all results should be positive
+        if multivariate:
+            regressor.add(Dense(units=output_dim, kernel_initializer='uniform', activation='relu' ))
+        else:
+            regressor.add(Dense(units=output_dim, kernel_initializer='uniform'))
 
         #Visualize model
         plot_model(regressor, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
@@ -237,6 +283,8 @@ else:
         regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
 
         return regressor
+    
+    output_dim = 2 if multivariate else 1 
     
     #Callbacks
     from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint
@@ -251,28 +299,7 @@ else:
     Checkpoint = ModelCheckpoint(cp, monitor='root_mean_squared_error', verbose=verbose, save_best_only=True)
 
     #Create tensorboard
-    tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
-    
-    '''
-    #Python doesn't have switch statements so will use a dictionary later
-    if path_to_tensorboard and not cp:
-        callbacks=[history, tensorboard, terminate_on_nan]
-        print("\n----------")
-        print("Saving tensorboard to {0}".format(path_to_tensorboard))
-        print("----------\n")
-    elif cp and not path_to_tensorboard:
-        callbacks=[history, terminate_on_nan, Checkpoint]
-        print("\n----------")
-        print("Saving model to {0}".format(cp))
-        print("----------\n")
-    elif path_to_tensorboard and cp:
-        callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
-        print("\n----------")
-        print("Saving model to {0}\nTensorboard to {1}".format(cp,path_to_tensorboard))
-        print("----------\n")
-    else:
-        callbacks=[history, terminate_on_nan]
-    '''       
+    tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)     
         
     def tensorboard_callback():
         callbacks=[history, tensorboard, terminate_on_nan]
@@ -334,6 +361,7 @@ else:
         from os import listdir
         files = listdir(path_to_batch)
         
+        #shuffle file order to avoid overfitting
         import random
         random.shuffle(files)
         
@@ -373,7 +401,7 @@ else:
         from sklearn.model_selection import KFold
         kfold = KFold(n_splits=10, shuffle=True)
         
-        ''' 
+        '''
         #Cross Validation
         accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
 
@@ -391,21 +419,42 @@ else:
         history = model.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
 
     #Prediction on test data, needed to reshape array to subtract element wise
-    y_pred = model.predict(X_test).reshape(-1,1)
+    
+    y_pred = model.predict(X_test) if multivariate else model.predict(X_test).reshape(-1,1)
     y_difference = np.subtract(y_pred, Y_test)
     abs_pred = np.absolute(y_difference) 
     
-    max_index, max_value = max(enumerate(abs_pred), key=lambda p: p[1])
+    if multivariate:
+        
+        max_in_index, max_in_value = max(enumerate(abs_pred[:,1]), key=lambda p: p[1])
+        max_del_index, max_del_value = max(enumerate(abs_pred[:,0]), key=lambda x: x[1])
     
-    accuracy = ((np.sum(abs_pred <= 0.5)/len(Y_test))*100)
-    mean_accuracy = y_difference.mean()
+        accuracy = ((np.sum(abs_pred <= 0.5)/len(Y_test))*50)
+        mean_accuracy = y_difference.mean()
 
-    visualisation(y_pred,Y_test, y_difference)
-      
-    #The closer to 0 the better the model
-    print("Average model Accuracy: {0}".format(mean_accuracy))
-    print("Largest difference is {0:.2f} at position {1}\nModel predicted {2:.2f} whereas actual result was {3}".format(float(max_value), max_index, float(y_pred[max_index]), int(Y_test[max_index])))
-    print("Model Performance: {0:.2f}%\nNumber of correct results (+/- 0.5): {1}/{2}".format(accuracy, np.sum(abs_pred <= 0.5), len(Y_test)))
+        visualisation(y_pred=y_pred[:,0].reshape(-1,1),Y_test=Y_test[:,0].reshape(-1,1), y_difference=y_difference[:,0].reshape(-1,1), filename='deletions.html')
+        visualisation(y_pred=y_pred[:,1].reshape(-1,1),Y_test=Y_test[:,1].reshape(-1,1), y_difference=y_difference[:,1].reshape(-1,1), filename='insertions.html')
+        print("Average model Accuracy: {0}".format(mean_accuracy))
+        print("Largest insertion difference is {0:.2f} at position {1}\nModel predicted {2:.2f} whereas actual result was {3}".format(float(max_in_value), max_in_index, float(y_pred[:,1][max_in_index]), int(Y_test[:,1][max_in_index])))
+        print("Largest deletion difference is {0:.2f} at position {1}\nModel predicted {2:.2f} whereas actual result was {3}".format(float(max_del_value), max_del_index, float(y_pred[:,0][max_del_index]), int(Y_test[:,0][max_del_index])))
+        print("Model Performance: {0:.2f}%\nNumber of correct results (+/- 0.5): {1}/{2}".format(accuracy, np.sum(abs_pred <= 0.5), len(Y_test)*2))
+   
+    else:
+        max_index, max_value = max(enumerate(abs_pred), key=lambda p: p[1])
+    
+        accuracy = ((np.sum(abs_pred <= 0.5)/len(Y_test))*100)
+        mean_accuracy = y_difference.mean()
+
+        visualisation(y_pred,Y_test, y_difference)
+        #The closer to 0 the better the model
+        print("Average model Accuracy: {0}".format(mean_accuracy))
+        print("Largest difference is {0:.2f} at position {1}\nModel predicted {2:.2f} whereas actual result was {3}".format(float(max_value), max_index, float(y_pred[max_index]), int(Y_test[max_index])))
+        print("Model Performance: {0:.2f}%\nNumber of correct results (+/- 0.5): {1}/{2}".format(accuracy, np.sum(abs_pred <= 0.5), len(Y_test)))
+    
+    print("Loading dataset and graphs in browser...")
+    sf = SFrame(build_csv(test_aligned_sequence, sc))
+    sf.explore()
+    sf.show()
     
 from math import sqrt
 
@@ -435,16 +484,6 @@ import subprocess
 
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
-
-#Building complete prediction table
-def build_csv(test_aligned_sequence, sc):
-    inverse_x = sc.inverse_transform(X_test)
-    test_aligned_sequence = np.reshape(test_aligned_sequence, (-1,1))
-    pred_set = np.concatenate((test_aligned_sequence,inverse_x,Y_test,y_pred),axis=1)
-    headers.append('Prediction')
-    frame = pd.DataFrame(pred_set, columns=headers)
-    print(frame.to_string())
-    return frame
 
 #correlation matrix
 #plt.matshow(frame.corr())
