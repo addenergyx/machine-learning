@@ -19,7 +19,7 @@ GetOptions(
 
 if (scalar @raw_data == 0){@raw_data = @ARGV}
 
-OUTER: foreach my $current_file (@raw_data) {
+foreach my $current_file (@raw_data) {
 
 	if (! defined $new_file) {
     	if ($ins) {
