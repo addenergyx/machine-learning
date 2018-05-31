@@ -9,21 +9,43 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import gc
 
-filename = 'classification_neural_network_Merged26.csv'
+#filename = 'classification_neural_network_Merged26.csv'
+filename = 'classification_50bp_miseq26_merged_data.csv'
 
 #Importing dataset
 dataset = pd.read_csv(filename)
+
+#y column
+outputset = dataset['ins/dels']
+
 dataset = dataset.drop(dataset.columns[-1], axis=1)
 
 #Using one hot encoding with drop first columns to avoid dummy variable trap
+#non_dropout = pd.get_dummies(dataset, drop_first=False)
 dataset = pd.get_dummies(dataset,drop_first=True)
+headers = list(dataset)
+#full_headers = list(non_dropout)
+
 length_X = len(dataset.columns) + 1
 
-outputset = pd.read_csv(filename, names=['ins/dels'], header=0)
+#outputset = pd.read_csv(filename, names=['ins/dels'], header=0)
+
+#ordered unique output possibilities
+myset = set(outputset)
+mylist = list(myset)
+mylist.sort()
+
+output_dict = {}
+
+for x in range(len(myset)):
+    key = x
+    value =  min(myset)
+    myset.remove(value)
+    output_dict[key] = value
 
 #Input layer
 X = dataset.iloc[: , 0:length_X].values
-del dataset
+#del dataset
 
 #Output layer
 #Y = dataset.iloc[: , 112:113].values
@@ -31,8 +53,7 @@ del dataset
 input_dim = len(X[0])
 
 #Encoding pairs
-from sklearn.preprocessing import LabelEncoder
-#OneHotEncoder, LabelBinarizer
+from sklearn.preprocessing import LabelEncoder #OneHotEncoder, LabelBinarizer
 
 labelencoder_output = LabelEncoder()
 #onehotencode = OneHotEncoder()
@@ -43,15 +64,20 @@ labelencoder_output = LabelEncoder()
 #in_y = binary.inverse_transform(en_y)
 
 Y_vector = labelencoder_output.fit_transform(outputset)
-del outputset
+#del outputset
 
 Y_vector = Y_vector.reshape(-1,1)
 
-from keras.utils import np_utils
+from keras.utils.np_utils import to_categorical
+import keras
+from numpy import argmax
 
 # one-vs-all
-dummy_y = np_utils.to_categorical(Y_vector)
-del Y_vector
+dummy_y = to_categorical(Y_vector)
+
+a = argmax(dummy_y, axis=1)
+
+#del Y_vector
 
 #onehotencoder = OneHotEncoder()
 
@@ -74,10 +100,10 @@ y_catagories = len(Y_test[0])
 #number of rows - outcome_size = len(Y_test)
 
 # delete references
-del X, dummy_y 
+#del X, dummy_y 
 
 #manually invoke garbage collection
-gc.collect()
+#gc.collect()
 
 #Feature scaling
 '''
@@ -141,12 +167,13 @@ date = strftime("%d-%m-%y")
 
 tensorboard = TensorBoard(log_dir='./logs/tensorboard/classification/' + date, histogram_freq=0, write_graph=True, write_images=True)
 
-classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=10000)
-
+classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000)
+'''
 kfold = KFold(n_splits=10, shuffle=True)
 
 results = cross_val_score(classifier, X_train, Y_train, cv=kfold, n_jobs=-1)
 print("Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+'''
 
 classifier.fit(X_train,Y_train, callbacks=[tensorboard])
 
@@ -155,13 +182,35 @@ y_prob = classifier.predict_proba(X_test)
 
 # pred_test = labelencoder_output.inverse_transform(Y_train)
 
-# most likely output, not really useful as wildtype (0) will always be most likely
+# most likely output, not really useful as wildtype (0) 
+#will probably always be most likely
 y_pred = classifier.predict(X_test)
+#y_pred = y_pred.reshape(-1,1)
 
+'''
+x = 1
+
+X_test[1,x]
+full_headers[x]
+
+import re
+
+for row in range(len(X_test)):
+    for column in range(len(X_test[0])):
+        if X_test[row,column] == 1:
+            seq = full_headers[column]
+            #seq = re.sub("\d+","", )
+
+for i in range(len(y_pred)):
+    y_pred[i] = output_dict.get(int(y_pred[i]))
+
+frame = pd.DataFrame(y_prob, columns=mylist)
+'''
 #classes = classifier.classes_
 #from sklearn.metrics import confusion_matrix
 #cm = confusion_matrix(Y_test, y_pred)
 
+#first , X_test = X_test[0], X_test[0:-1,:]
 
 
 
