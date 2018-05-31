@@ -98,28 +98,10 @@ def build_data(sample):
             
     #Output layer
     Y = dataset.iloc[:, input_dim + 1:20].values if multivariate else dataset.iloc[: , (input_dim + 1):(input_dim + 2)].values 
-
-    '''
-    #Encoding values, assigning each catagory a number
-        
-    #Encoding NHEJ
-    labelencoder = LabelEncoder()
-    X[:,1] = labelencoder.fit_transform(X[:,1])
-    
-    #Encoding UNMODIFIED
-    X[:,2] = labelencoder.fit_transform(X[:,2])
-    
-    #Encoding frameshift
-    X[:,15] = labelencoder.fit_transform(X[:,15])
-    
-    #Encoding HDR
-    X[:,3] = labelencoder.fit_transform(X[:,3])
-    '''
     
     #Spliting dataset into training and test set
     from sklearn.model_selection import train_test_split
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
-        
 
     #Dropping aligned sequence here instead of at the beginning so it can later be
     #appened to prediction table
@@ -298,9 +280,10 @@ else:
 
         #Complie model
         regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
-
+        
+        
         return regressor
-
+        
     output_dim = 2 if multivariate else 1 
 
     #Callbacks
@@ -383,7 +366,7 @@ else:
 
         #Build model
         model = build_regressor()
-
+        
         #Fit model to generated data
         '''When dealing with large datasets that can not fit into memory the best approach is to add the data to the model sequentially therefore only storing one file
         to memory at a time. It was not possible to merge the data into one file and run the model since memory would continue to increase
@@ -416,6 +399,7 @@ else:
         from sklearn.model_selection import KFold
         kfold = KFold(n_splits=10, shuffle=True)
         
+        
         '''
         #Cross Validation
         accuracy = cross_val_score(estimator=model, X = X_train, y = Y_train, cv=kfold, n_jobs=n_cpu, verbose=verbose)
@@ -429,11 +413,11 @@ else:
         print("\n----------\n")
         input("Press Enter to continue...")
         '''
+        
         #Have to fit data to model again after cross validation
         history = model.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
 
     #Prediction on test data, needed to reshape array to subtract element wise
-
     y_pred = model.predict(X_test) if multivariate else model.predict(X_test).reshape(-1,1)
     y_difference = np.subtract(y_pred, Y_test)
     abs_pred = np.absolute(y_difference) 
@@ -546,3 +530,43 @@ if cp:
         default = '{0}/machine-learning/predictions/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
+
+
+#feature importance
+'''
+keras doesn't natively currently support feature importance
+Probably to simpliest way to do this is to take the absoulte weights of the 
+first layer of each variable and assume more important features have higher weights.
+However these weights may be misleading as it is completely possible for weights
+to change in subsequent layers
+'''
+
+'''
+import lime
+import lime.lime_tabular
+
+explainer = lime.lime_tabular.LimeTabularExplainer(X_test, feature_names=headers, class_names=['ins/dels'], verbose=True, mode='regression')
+i = 25
+exp = explainer.explain_instance(X_test[10], model.predict(X_test), num_features=17)
+'''
+
+weights = build_regressor().get_weights()
+layer_1_weights = np.sum(abs(weights[0]),axis=1).tolist()
+feature_importance = np.column_stack((headers[1:18], layer_1_weights))
+feature_importance = feature_importance[np.argsort(feature_importance[:, -1][::-1])]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
