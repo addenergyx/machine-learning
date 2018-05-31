@@ -28,8 +28,10 @@ foreach my $file (@ARGV) {
 	#`perl -i -ne 'print unless eof' $file`
 	print "Stored file $file\n"; 	
 }
+
+my $filename = 'classification_50bp_miseq26_merged_data.csv'; 
 unshift (@file, $headers);
-open my $out, '>', 'multivariate_20_merged_data.csv' or die $!;
+open my $out, '>', $filename or die $!;
 print "Copying files to output\n";
 print $out @file;
 close $out;
