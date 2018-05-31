@@ -12,8 +12,10 @@ cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: ~/machine-learning/merged_data/Miseq26_data.csv 
-#sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
+#sample: ~/machine-learning/alleles_frequency_table_mv/multivariate_dataset_Miseq_020_S100_expQ331K_TDP_3_Alleles_frequency_table.txt 
+#sample: ~/machine-learning/merged_data/multivariate_20_merged_data.csv 
+#sample: ~/machine-learning/merged_data/Miseq_20-26_data.csv 
+sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
 # Use batch instead of 'sample' if you want to analyse multiple files in the same model
@@ -27,6 +29,8 @@ sample: ~/machine-learning/merged_data/Miseq26_data.csv
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
 # False,True,False,0,68,77,39,94,68,2,1,-106.400001525879,26,278,False,1684,34.9885726158,0  
 #predict: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.9885726158
+# Prediction on multiple observations can be made by giving path to file
+#predict: /home/ubuntu/machine-learning/csv/Neural_network_Example_summary.csv
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
@@ -36,3 +40,6 @@ sample: ~/machine-learning/merged_data/Miseq26_data.csv
 # Default:/home/ubuntu/machine-learning/logs/tensorboard/regression/{date}
 # When the model finishes program will automatically open tensorboard in the browser
 #tensorboard:
+
+#multivariate: True
+
