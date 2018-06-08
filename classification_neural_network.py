@@ -189,13 +189,14 @@ def build_classifier():
     classifier.add(Dropout(rate=0.1))
     
     #Output layer
-    classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='softmax'))
+    classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='sigmoid'))
     
     #Complie model
-    # Categorical crossentropy wouldn't be appropriate here as it is the sum of 
-    # binary crossentropies because it is not a probability distribution over the labels 
-    # but individual probabilities over every label individually    
-    classifier.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics = ['accuracy'])
+    # Categorical crossentropy wouldn't be appropriate here as it looks at the probabilty
+    # in relation of the other categories
+    # Chose binary crossentropies because it is not a probability distribution over the labels 
+    # but individual probabilities over every label    
+    classifier.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics = ['accuracy'])
     
     return classifier
 
@@ -267,7 +268,12 @@ y_prob = classifier.predict_proba(X_test)
 y_pred = classifier.predict(X_test)
 #y_pred = y_pred.reshape(-1,1)
 
+#Index of top 5 indels 
 encoded_top5 = (-y_prob).argsort()[:,0:5]
+
+#Probability of top 5 indels
+top5_prob = np.sort(-y_prob)[:,0:5] * -100
+
 encoded_y_true = np.argsort(Y_test)[:,-1]
 
 # Vectorise function to map back to true values
@@ -288,7 +294,7 @@ for x in range(len(headers)):
     seq_dict[key] = value
 
 # Test sequence: TGAGAAAACCAAACAGGGTGTGGCAGAAGCAGCAGGAAAGACAAAAGAGG
-#a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
+a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
 #b_seq = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
 # For testing swap x in mapping function enumerate(x) with a_seq 
 # and execute lines inside function (not the function itself) 
@@ -308,7 +314,7 @@ for x in range(1, no_of_bases + 1):
 # Mapping sequence
 def mapping(x):
     bases = {}
-    for i, e in enumerate(x):
+    for i, e in enumerate(a_seq):
         if e == 1:
             parts = seq_dict[i].split("_")
             bases[int(parts[0])] = parts[1]
@@ -335,8 +341,8 @@ def old_mapping(x):
     for i in range(1, no_of_bases + 1):
         #basestr = str(ordered_bases[i-1])
         try:
-            #if str(ordered_bases[i-1]).startswith('{0}_'.format(i)) is False:
-            if re.match('^{0}_'.format(i),ordered_bases[i-1]) is None: 
+            if str(ordered_bases[i-1]).startswith('{0}_'.format(i)) is False:
+            #if re.match('^{0}_'.format(i),ordered_bases[i-1]) is None: 
                 ordered_bases = np.insert(ordered_bases, i-1, missing_base_dict.get(i))
         except IndexError:
             ordered_bases = np.append(ordered_bases, missing_base_dict.get(i))
@@ -355,7 +361,7 @@ sequences = np.apply_along_axis( mapping, axis=1, arr=X_test).reshape(-1,1)
 end = time.time()
 lapse = end - start
 wait.stop()
-print('Mapping medthod length of execution: {0}'.format(lapse))
+print('Remapping execution time: {0}'.format(lapse))
 print("\n----------\n")
 
 '''
@@ -363,7 +369,7 @@ old_start = time.time()
 sequences = np.apply_along_axis( old_mapping, axis=1, arr=X_test).reshape(-1,1)
 old_end = time.time()
 old_lapse = old_end - old_start
-print('Old mapping medthod length of execution: {0}'.format(old_lapse))
+print('Old mapping method length of execution: {0}'.format(old_lapse))
 '''
 
 def sframe(frame):
@@ -373,7 +379,7 @@ def sframe(frame):
     sf.show()
     return
 
-# Dataset of sequence with top 5 predicted in/del
+# Dataset of sequence with top 5 predicted in/del   
 pred_set = np.concatenate((sequences,y_true,top5),axis=1)
 pred_set_headers = ['Sequence', 'Actual Result','Predicted Most Likely in/del','2nd','3rd','4th','5th']
 frame = pd.DataFrame(pred_set, columns=pred_set_headers)
@@ -389,10 +395,16 @@ if user_observation is not None:
     #user_observation = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
     user_proba = classifier.predict_proba(np.array(user_observation))
     encoded_user_top5 = (-user_proba).argsort()[:,0:5]
+    user_top5_prob = np.sort(-user_proba)[:,0:5] * -100
     user_top5 = vfunc(encoded_user_top5, output_dict)
-    user_headers = ['Sequence','Most likely','2nd','3rd','4th','5th']
+    user_headers = ['Reference Sequence','Most likely','%','2nd','2%','3rd','3%','4th','4%','5th','5%']
     user_sequence = np.apply_along_axis( mapping, axis=1, arr=user_observation).reshape(-1,1)
-    user_set = np.concatenate((user_sequence,user_top5),axis=1)
+    
+    arraysss = []
+    for x in range(5):
+        arraysss.extend([int(user_top5[:,x]), '{0}%'.format(int(user_top5_prob[:,x]))])
+
+    user_set = np.concatenate((user_sequence, [arraysss]),axis=1)
     user_frame = pd.DataFrame(user_set,columns=user_headers)
     sframe(frame=user_frame)
 
@@ -406,7 +418,6 @@ if cp:
         default = '{0}/machine-learning/predictions/classification/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
-
 
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
