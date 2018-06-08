@@ -18,6 +18,12 @@ import re
 import animation
 import subprocess
 
+'''
+Putting moudles at the top instead of within functions as the latter will make 
+calls to the function take longer. However can look into the cost of importing modules in
+optional functions and if statments like sframe()  
+'''
+
 #Multiplatform home environment
 home = expanduser("~")
 date = time.strftime("%d-%m-%y")
@@ -282,8 +288,8 @@ for x in range(len(headers)):
     seq_dict[key] = value
 
 # Test sequence: TGAGAAAACCAAACAGGGTGTGGCAGAAGCAGCAGGAAAGACAAAAGAGG
-a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
-b_seq = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
+#a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
+#b_seq = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
 # For testing swap x in mapping function enumerate(x) with a_seq 
 # and execute lines inside function (not the function itself) 
 
@@ -305,13 +311,13 @@ def mapping(x):
     for i, e in enumerate(x):
         if e == 1:
             parts = seq_dict[i].split("_")
-            bases[parts[0]] = parts[1]
-    results = [None] * no_of_bases
-    for i in range(0, no_of_bases):
+            bases[int(parts[0])] = parts[1]
+    results = [""] * 26
+    for i in range(1, 26):
         if i in bases:
             results[i] = bases[i]
         else:
-            results[i] = missing_base_dict.get(i + 1).split("_")[1]
+            results[i] = missing_base_dict.get(i).split("_")[1]
     seq = ''.join(results)
     return seq
 
