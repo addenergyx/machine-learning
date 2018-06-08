@@ -1,9 +1,40 @@
-#Multiplatform home environment
-from os.path import expanduser
-home = expanduser("~")
+#!/usr/bin/env python3
+
+from os.path import expanduser, isfile 
+from os import listdir
+from random import shuffle
 from time import strftime
-date = strftime("%d-%m-%y")
 import configargparse
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from turicreate import SFrame
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential #Initialises Neural Network
+from keras.layers import Dense #Creates layers in the Neural Network
+from keras.layers import Dropout #Regularization
+from keras.wrappers.scikit_learn import KerasRegressor 
+#from sklearn.model_selection import cross_val_score #K-fold cross valdation, reduces variance and bias
+from sklearn.metrics import explained_variance_score, mean_squared_error 
+from keras.utils.vis_utils import plot_model
+from keras import backend as k #Currently using tensorflow backend
+from bokeh.plotting import figure, output_file, show
+from keras.models import load_model
+from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint
+from math import sqrt
+import subprocess
+import re
+
+'''
+Putting moudles at the top instead of within functions as the latter will make 
+calls to the function take longer. However can look into the cost of importing modules in
+optional functions and if statments like generator_batch()  
+'''
+
+#Multiplatform home environment
+home = expanduser("~")
+date = strftime("%d-%m-%y")
 
 #Command-Line Option and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
@@ -50,19 +81,12 @@ print("\n----------\n")
 #Neural Network
 
 #Preparing data
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from time import strftime
-from turicreate import SFrame
 
 #Encoding categorical data
-from sklearn.preprocessing import LabelEncoder
 labelencoder = LabelEncoder()
 
 #Feature scaling -1 to +1 because there will be alot of parallel computations
 #can use standardisation or normalisation
-from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
     
 def build_data(sample):
@@ -100,7 +124,6 @@ def build_data(sample):
     Y = dataset.iloc[:, input_dim + 1:20].values if multivariate else dataset.iloc[: , (input_dim + 1):(input_dim + 2)].values 
     
     #Spliting dataset into training and test set
-    from sklearn.model_selection import train_test_split
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.3, random_state=42)
 
     #Dropping aligned sequence here instead of at the beginning so it can later be
@@ -140,24 +163,6 @@ def build_csv(test_aligned_sequence):
     frame = pd.DataFrame(pred_set, columns=headers)
     #print(frame.to_string())
     return frame
-
-#Initialises Neural Network
-from keras.models import Sequential
-
-#Creates layers in the Neural Network
-from keras.layers import Dense 
-
-#Regularization
-from keras.layers import Dropout
-
-#K-fold cross valdation, reduces variance and bias
-from keras.wrappers.scikit_learn import KerasRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import explained_variance_score, mean_squared_error 
-from keras.utils.vis_utils import plot_model
-
-#Currently using tensorflow backend
-from keras import backend as k
 
 #Keras does not have root mean squared error so had to create a custom loss
 #to match Amazon's ML model loss function
@@ -204,7 +209,6 @@ def visualisation(y_pred, Y_test, y_difference, filename='vis.html'):
     plt.plot(y_difference)
     plt.show()
 
-    from bokeh.plotting import figure, output_file, show
     # output to static HTML file
     output_file(filename)
     # create a new plot with a title and axis labels
@@ -218,7 +222,6 @@ def visualisation(y_pred, Y_test, y_difference, filename='vis.html'):
 
 if saved_model is not None:
     #load model
-    from keras.models import load_model
     model = load_model(saved_model, custom_objects={'root_mean_squared_error': root_mean_squared_error })
     print("Loading model %s from disk" % saved_model)
     model.compile(loss='mse', optimizer='adam', metrics=[root_mean_squared_error])
@@ -281,13 +284,11 @@ else:
         #Complie model
         regressor.compile(optimizer='adam', loss='mse', metrics=[root_mean_squared_error])
         
-        
         return regressor
         
     output_dim = 2 if multivariate else 1 
 
     #Callbacks
-    from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint
 
     #Save loss function progress
     history = History()
@@ -356,13 +357,12 @@ else:
 
     # Keras's scikit-learn wrapper doesn't work with fit_generator so had to separate them
     if path_to_batch is not None:
+        
         # Files in batch
-        from os import listdir
         files = listdir(path_to_batch)
 
         #shuffle file order to avoid overfitting
-        import random
-        random.shuffle(files)
+        shuffle(files)
 
         #Build model
         model = build_regressor()
@@ -454,8 +454,6 @@ else:
     sf.explore()
     sf.show()
 
-from math import sqrt
-
 #Results variance and mean, best possible score is 1.0 for variance
 variance = explained_variance_score(Y_test, y_pred)
 rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
@@ -463,8 +461,7 @@ rmse_value = sqrt(mean_squared_error(Y_test, y_pred))
 #Single prediction
 if user_observation:
 
-    import os
-    if os.path.isfile(''.join(user_observation)):
+    if isfile(''.join(user_observation)):
         user_observation = ''.join(user_observation)
 
         data = pd.read_csv(user_observation)
@@ -496,7 +493,6 @@ if user_observation:
 
     else:
         str_observation = ','.join(user_observation)
-        import re
         fixed_observation = re.sub('true', '1', str_observation, flags=re.IGNORECASE)
         fixed_observation = re.sub('false', '0', fixed_observation, flags=re.IGNORECASE)
 
@@ -505,15 +501,10 @@ if user_observation:
         #user_observation = [0 if x is 'False' else x for x in user_observation]
 
         list_observation = [float(i) for i in fixed_observation.split(',')]
+        #Another square bracket around list observation so that it becomes a horizontal vector
         new_prediction = model.predict(sc.transform(np.array([list_observation])))
         print("\n----------\n")
         print ("Prediction is %s" % new_prediction)
-
-#Opens tensorboard in browser if user saves new tensorboard
-import subprocess
-
-if path_to_tensorboard:
-    subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
 #correlation matrix
 #plt.matshow(frame.corr())
@@ -527,40 +518,28 @@ if cp:
     save_csv = input("Do you wish to save csv of data? [Y/N] ")
 
     if save_csv.lower() is 'y' or 'yes':
-        default = '{0}/machine-learning/predictions/{1}_miseq_predictions'.format(home, date)
+        default = '{0}/machine-learning/predictions/regression/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
 
 
 #feature importance
 '''
-keras doesn't natively currently support feature importance
+Keras doesn't natively currently support feature importance
 Probably to simpliest way to do this is to take the absoulte weights of the 
 first layer of each variable and assume more important features have higher weights.
-However these weights may be misleading as it is completely possible for weights
+However the result may be misleading as it is completely possible for weights
 to change in subsequent layers
-'''
-
-'''
-import lime
-import lime.lime_tabular
-
-explainer = lime.lime_tabular.LimeTabularExplainer(X_test, feature_names=headers, class_names=['ins/dels'], verbose=True, mode='regression')
-i = 25
-exp = explainer.explain_instance(X_test[10], model.predict(X_test), num_features=17)
 '''
 
 weights = build_regressor().get_weights()
 layer_1_weights = np.sum(abs(weights[0]),axis=1).tolist()
 feature_importance = np.column_stack((headers[1:18], layer_1_weights))
-feature_importance = feature_importance[np.argsort(feature_importance[:, -1][::-1])]
+feature_importance = feature_importance[np.argsort(feature_importance[:, -1])][::-1]
 
-
-
-
-
-
-
+#Opens tensorboard in browser if user saves new tensorboard
+if path_to_tensorboard:
+    subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
 
 
