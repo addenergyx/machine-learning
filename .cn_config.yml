@@ -1,18 +1,18 @@
 # Configuration file for classification_neural_network.py
-# The neural network will load the config files from ~/machine-learning/,nn_config.yml unles
+# The neural network will load the config files from ~/machine-learning/.nn_config.yml unles
 # specified otherwise using --config <path/to/config/file> 
 
 # Command-line values override environment variables which override config file values which
 # override defaults
 
 # Number of cpus the program should use
-# Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cpu. 
-# To avoid this source setup.sh before running the neural net, change cpu to 1 or comment out code relating to cross validation (lines 374 - 383 in neural_network.py)
+# Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cp 
+# To avoid this source setup.sh before running the neural net, change cpu to 1 or comment out code relating to cross validation 
 cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: ~/machine-learning/csv/classification_50bp_miseq26_merged_data.csv
+sample: ~/machine-learning/csv/classification/classification_50bp_miseq26_merged_data.csv
 #sample: ~/machine-learning/test.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
@@ -20,22 +20,19 @@ sample: ~/machine-learning/csv/classification_50bp_miseq26_merged_data.csv
 # Batch flag will override sample flag 
 #batch: /home/ubuntu/machine-learning/smallsamplefiles/
 
-# Path to save model (Default: ~/machine-learning/snapshots/{date}_trained_model.h5)
+# Path to save model (Default: ~/machine-learning/snapshots/classification/{date}_trained_model.h5)
 #save:
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
 predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG
-# Prediction on multiple observations can be made by giving path to file
-#predict: /home/ubuntu/machine-learning/csv/Neural_network_Example_summary.csv
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
-#load: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
+#load: /home/ubuntu/machine-learning/snapshots/classification/13-06-18_trained_model.h5
 
 # Path of dir to save tensorboard of new model 
-# Default:/home/ubuntu/machine-learning/logs/tensorboard/regression/{date}
 # When the model finishes program will automatically open tensorboard in the browser
-#tensorboard:
+#tensorboard: /home/ubuntu/machine-learning/tensorboard/classification/13-06-18_classification_tensorboard
 
 

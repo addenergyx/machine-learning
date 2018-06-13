@@ -20,7 +20,7 @@ from sklearn.metrics import explained_variance_score, mean_squared_error
 from keras.utils.vis_utils import plot_model
 from keras import backend as k #Currently using tensorflow backend
 from bokeh.plotting import figure, output_file, show
-from keras.models import load_model
+from keras.models import load_model 
 from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoint
 from math import sqrt
 import subprocess
@@ -42,15 +42,15 @@ config = configargparse.ArgParser(default_config_files=[home + '/machine-learnin
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
 config.add_argument('-c','--cpu', action="store", type=int, default=-1, 
                     help="The number of CPUs to use to do the computation (default: -1 'all CPUs')")
-config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/Neural_network_Example_summary.csv', 
+config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/regression/Neural_network_Example_summary.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'Neural_network_Example_summary.csv')")
-config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/logs/tensorboard/{1}_regression'.format(home, date), 
+config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/tensorboard/regression/{1}_regression_tensorboard'.format(home, date), 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
-config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/%s_trained_model.h5" % date, help="Save model to disk")
+config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/regression/%s_regression_trained_model.h5" % date, help="Save model to disk")
 config.add_argument('-v','--verbose', action="store_true", help="Verbosity mode")
 config.add_argument('-p','--predict', nargs='+',
                     help="Can parse a single observation or file containing multiple observations to make predictions on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%%Reads. For example: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.988572615")
-config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/03-05-18_best_model.h5', help="Path to saved model", nargs='?')
+config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/regession/03-05-18_best_model.h5', help="Path to saved model", nargs='?')
 config.add_argument('-b', '--batch', nargs='?', const=home + '/machine-learning/smallsamplefiles', 
                     help="Path to directory containing multiple files with data in the correct format. Default: ~/machine-learning/smallsamplefiles/")
 config.add_argument('-m','--multivariate', action="store_true", help="Multivariance mode")
@@ -230,7 +230,7 @@ if saved_model is not None:
     print("%s: %.2f" % (model.metrics_names[1], score[1]))
 
     #predict
-    '''Currently this part is written twice (once for each model). Should look into having
+    '''Currently this code is repeated twice (once for each model). Should look into having
     this outside the if/else so it runs for both at the end therefore not repeating code.
     Line 364-366'''
     y_pred = model.predict(X_test)
@@ -398,7 +398,6 @@ else:
         #Most of the time k=10
         from sklearn.model_selection import KFold
         kfold = KFold(n_splits=10, shuffle=True)
-        
         
         '''
         #Cross Validation

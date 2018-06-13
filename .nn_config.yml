@@ -1,12 +1,12 @@
 # Configuration file for neural_network.py
-# The neural network will load the config files from ~/machine-learning/,nn_config.yml unles
+# The neural network will load the config files from ~/machine-learning/.nn_config.yml unless
 # specified otherwise using --config <path/to/config/file> 
 
 # Command-line values override environment variables which override config file values which
 # override defaults
 
 # Number of cpus the program should use
-# Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cpu. 
+# Sometimes the program freezes and shows '1/100 Epochs' four times when using more than 1 cpuis used 
 # To avoid this source setup.sh before running the neural net, change cpu to 1 or comment out code relating to cross validation (lines 374 - 383 in neural_network.py)
 cpu: -1
 
@@ -15,14 +15,14 @@ cpu: -1
 #sample: ~/machine-learning/alleles_frequency_table_mv/multivariate_dataset_Miseq_020_S100_expQ331K_TDP_3_Alleles_frequency_table.txt 
 #sample: ~/machine-learning/merged_data/multivariate_20_merged_data.csv 
 #sample: ~/machine-learning/merged_data/Miseq_20-26_data.csv 
-sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
+sample: ~/machine-learning/csv/regression/Neural_network_Example_summary.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
 # Use batch instead of 'sample' if you want to analyse multiple files in the same model
 # Batch flag will override sample flag 
 #batch: /home/ubuntu/machine-learning/smallsamplefiles/
 
-# Path to save model (Default: ~/machine-learning/snapshots/{date}_trained_model.h5)
+# Path to save model (Default: ~/machine-learning/snapshots/regression/{date}_trained_model.h5)
 #save:
 
 # Prediction on a single observation
@@ -30,16 +30,18 @@ sample: ~/machine-learning/csv/Neural_network_Example_summary.csv
 # False,True,False,0,68,77,39,94,68,2,1,-106.400001525879,26,278,False,1684,34.9885726158,0  
 #predict: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.9885726158
 # Prediction on multiple observations can be made by giving path to file
-#predict: /home/ubuntu/machine-learning/csv/Neural_network_Example_summary.csv
+#predict: /home/ubuntu/machine-learning/csv/regression/Neural_network_Example_summary.csv
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
-#load: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
+#load: /home/ubuntu/machine-learning/snapshots/regression/03-05-18_best_model.h5
 
 # Path of dir to save tensorboard of new model 
 # Default:/home/ubuntu/machine-learning/logs/tensorboard/regression/{date}
-# When the model finishes program will automatically open tensorboard in the browser
+# When the model finishes running tensorboard will automatically open in the browser
+# Go the https://machine-learning:6006 to view tensorboard
 #tensorboard:
 
+# If the file contains two outputs (insertion and deletion are seperated) set to true
 #multivariate: True
 
