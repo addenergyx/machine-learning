@@ -17,9 +17,14 @@ from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoin
 import re
 import animation
 import subprocess
+import matplotlib.pyplot as plt
+from bokeh.plotting import figure, output_file, show
+from keras.models import load_model
+from turicreate import SFrame
+
 
 '''
-Putting moudles at the top instead of within functions as the latter will make 
+Put modules at the top instead of within functions as the latter will make 
 calls to the function take longer. However can look into the cost of importing modules in
 optional functions and if statments like sframe()  
 '''
@@ -34,15 +39,15 @@ config = configargparse.ArgParser(default_config_files=[home + '/machine-learnin
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
 config.add_argument('-c','--cpu', action="store", type=int, default=-1, 
                     help="The number of CPUs to use to do the computation (default: -1 'all CPUs')")
-config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/classification_50bp_miseq26_merged_data.csv', 
+config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/classification/classification_50bp_miseq26_merged_data.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'classification_50bp_miseq26_merged_data.csv')")
-config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/logs/tensorboard/{1}_classification'.format(home, date), 
+config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/tensorboard/classification/{1}_classification_tensorboard'.format(home, date), 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
-config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/%s_trained_model.h5" % date, help="Save model to disk")
+config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/classification/%s_classification_trained_model.h5" % date, help="Save model to disk")
 config.add_argument('-v','--verbose', action="store_true", help="Verbosity mode")
 config.add_argument('-p','--predict', nargs='+',
                     help="Can parse a single observation or file containing multiple observations to make predictions on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%%Reads. For example: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.988572615")
-config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/03-05-18_best_model.h5', help="Path to saved model", nargs='?')
+config.add_argument('-l','--load', const=home + '/machine-learning/snapshots/classification/13-06-18_classification_trained_model.h5', help="Path to saved model", nargs='?')
 config.add_argument('-b', '--batch', nargs='?', const=home + '/machine-learning/smallsamplefiles', 
                     help="Path to directory containing multiple files with data in the correct format. Default: ~/machine-learning/smallsamplefiles/")
 
@@ -88,8 +93,8 @@ no_of_bases = len(dataset.columns)
 
 #user_observation = ['TG','AG','AA','AA','CC','AA','AC','AG','GG','TG','TG','GC','AG','AA','GC','AG','CA','GG','AA','AG','AC','AA','AA','GA','GG']
 
-# Appending user input to dataset so it can be formatted in the same way as the dataset
-# Can only pasre data to classifier.predict encoded in the same way as the dataset 
+# Appending user observation to dataset so it can be encoded in the same way as the dataset
+# Can only parse data that has been encoded in the same way as the dataset to classifer.predict() 
 '''
 One issue with using this method for prediction based on user sequence 
 is that predictions can't be made based on a loaded model. As a result the user
@@ -141,11 +146,10 @@ else:
 #Input layer
 X = dataset.iloc[: , 0:length_X].values
 
-
+#Number of inputs
 input_dim = len(X[0])
 
 #Encoding pairs
-
 labelencoder_output = LabelEncoder()
 
 Y_vector = labelencoder_output.fit_transform(outputset)
@@ -175,91 +179,107 @@ X_test = sc.transform(X_test)
 '''
 ###^^ Build_data ###
 
-#Neural Network architecture
-def build_classifier():
-    #Initialising neural network
-    classifier = Sequential()
+def sframe(frame):
+    sf = SFrame(frame)
+    sf.explore()
+    sf.show()
+    return
+
+if saved_model is not None:
+    classifier = load_model(saved_model)
+    print("\nLoading model %s from disk" % saved_model)
+    classifier.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+    #X_test, Y_test = build_data(sample)[0:2]
+    score = classifier.evaluate(X_test, Y_test, verbose=verbose)
+    print("\n%s: %.2f" % (classifier.metrics_names[1], score[1]*100))
+    '''print sframe'''    
+
+else:
+    #Neural Network architecture
+    def build_classifier():
+        #Initialising neural network
+        classifier = Sequential()
+        
+        #Input layer and first hidden layer with dropout
+        classifier.add(Dense(units=200, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
+        classifier.add(Dropout(rate=0.1))
+        
+        #Hidden layer 2 with dropout
+        classifier.add(Dense(units=200, kernel_initializer='uniform', activation='relu'))
+        classifier.add(Dropout(rate=0.1))
+        
+        #Output layer
+        classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='sigmoid'))
+        
+        #Complie model
+        # Categorical crossentropy wouldn't be appropriate here as it looks at the probabilty
+        # in relation of the other categories
+        # Chose binary crossentropies because it is not a probability distribution over the labels 
+        # but individual probabilities over every label    
+        classifier.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics = ['accuracy'])
+        
+        return classifier
     
-    #Input layer and first hidden layer with dropout
-    classifier.add(Dense(units=200, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
-    classifier.add(Dropout(rate=0.1))
+    #Save loss function progress
+    history = History()
     
-    #Hidden layer 2 with dropout
-    classifier.add(Dense(units=200, kernel_initializer='uniform', activation='relu'))
-    classifier.add(Dropout(rate=0.1))
+    #Model stops if loss function is nan, this happens when there is missing data
+    terminate_on_nan = TerminateOnNaN()
     
-    #Output layer
-    classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='sigmoid'))
+    #Save model
+    Checkpoint = ModelCheckpoint(cp, monitor='acc', verbose=verbose, save_best_only=True)
     
-    #Complie model
-    # Categorical crossentropy wouldn't be appropriate here as it looks at the probabilty
-    # in relation of the other categories
-    # Chose binary crossentropies because it is not a probability distribution over the labels 
-    # but individual probabilities over every label    
-    classifier.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics = ['accuracy'])
+    tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
     
-    return classifier
-
-#Save loss function progress
-history = History()
-
-#Model stops if loss function is nan, this happens when there is missing data
-terminate_on_nan = TerminateOnNaN()
-
-#Save model
-Checkpoint = ModelCheckpoint(cp, monitor='val_loss', verbose=verbose, save_best_only=True)
-
-tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
-
-classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000)
-
-def tensorboard_callback():
-    callbacks=[history, tensorboard, terminate_on_nan]
-    print("\n----------")
-    print("Saving tensorboard to {0}".format(path_to_tensorboard))
-    print("----------\n")
-    return callbacks
-
-def checkpoint_callback():
-    callbacks=[history, terminate_on_nan, Checkpoint]
-    print("\n----------")
-    print("Saving model to {0}".format(cp))
-    print("----------\n")
-    return callbacks
-
-def both_callback():
-    callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
-    print("\n----------")
-    print("Saving model to {0}\nSaving tensorboard to {1}".format(cp,path_to_tensorboard))
-    print("----------\n")
-    return callbacks
-
-def no_callback():
-    callbacks=[history, terminate_on_nan]
-    return callbacks
-
-callbacks_dict = {
-        path_to_tensorboard and cp is None                         : tensorboard_callback,
-        cp and path_to_tensorboard is None                         : checkpoint_callback,
-        all (var is not None for var in [path_to_tensorboard, cp]) : both_callback,
-        not path_to_tensorboard and not cp                         : no_callback
-        }
-
-def switch_case_callbacks(x):
-    return callbacks_dict[x]()
-
-'''
-# Cross validation
-kfold = KFold(n_splits=10, shuffle=True)
-results = cross_val_score(classifier, X_train, Y_train, cv=kfold, n_jobs=-1)
-print("Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
-'''
-
-start = time.time()
-classifier.fit(X_train,Y_train, callbacks=switch_case_callbacks(x=True))
-end = time.time()
-time_completion = (end - start) / 60
-print('Model completion time: {0}'.format(time_completion))
+    classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000)
+    
+    def tensorboard_callback():
+        callbacks=[history, tensorboard, terminate_on_nan]
+        print("\n----------")
+        print("Saving tensorboard to {0}".format(path_to_tensorboard))
+        print("----------\n")
+        return callbacks
+    
+    def checkpoint_callback():
+        callbacks=[history, terminate_on_nan, Checkpoint]
+        print("\n----------")
+        print("Saving model to {0}".format(cp))
+        print("----------\n")
+        return callbacks
+    
+    def both_callback():
+        callbacks=[history, terminate_on_nan, Checkpoint, tensorboard]
+        print("\n----------")
+        print("Saving model to {0}\nSaving tensorboard to {1}".format(cp,path_to_tensorboard))
+        print("----------\n")
+        return callbacks
+    
+    def no_callback():
+        callbacks=[history, terminate_on_nan]
+        return callbacks
+    
+    callbacks_dict = {
+            path_to_tensorboard and cp is None                         : tensorboard_callback,
+            cp and path_to_tensorboard is None                         : checkpoint_callback,
+            all (var is not None for var in [path_to_tensorboard, cp]) : both_callback,
+            not path_to_tensorboard and not cp                         : no_callback
+            }
+    
+    def switch_case_callbacks(x):
+        return callbacks_dict[x]()
+    
+    '''
+    # Cross validation
+    kfold = KFold(n_splits=10, shuffle=True)
+    results = cross_val_score(classifier, X_train, Y_train, cv=kfold, n_jobs=-1)
+    print("Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
+    '''
+    
+    start = time.time()
+    classifier.fit(X_train,Y_train, callbacks=switch_case_callbacks(x=True))
+    end = time.time()
+    time_completion = (end - start) / 60
+    print('Model completion time: {0:.2f} minutes'.format(time_completion))
 
 #probability of different outcomes
 y_prob = classifier.predict_proba(X_test)
@@ -327,7 +347,11 @@ def mapping(x):
     seq = ''.join(results)
     return seq
 
-'''
+def seq_to_crispr(x):
+    crispr = str(x)[30:50]
+    return crispr
+
+
 ### old functions for mapping ###
 def seq_map_func(val, dictionary):
     return dictionary[val] if val in dictionary else val
@@ -351,17 +375,19 @@ def old_mapping(x):
         ordered_bases[base] = re.sub("\d+_","",ordered_bases[base])
     seq = ''.join(ordered_bases)
     return seq
-'''
 
 print("\n----------\n")
 wait = animation.Wait(text='Remapping data')
 wait.start()
 start = time.time()
 sequences = np.apply_along_axis( mapping, axis=1, arr=X_test).reshape(-1,1)
+print("\nSequences mapped")
+crisprs = np.apply_along_axis( seq_to_crispr, axis=1, arr=sequences).reshape(-1,1)
+print("Crisprs found")
 end = time.time()
 lapse = end - start
 wait.stop()
-print('Remapping execution time: {0}'.format(lapse))
+print('\nRemapping execution time: {0:.2f} seconds'.format(lapse))
 print("\n----------\n")
 
 '''
@@ -369,19 +395,21 @@ old_start = time.time()
 sequences = np.apply_along_axis( old_mapping, axis=1, arr=X_test).reshape(-1,1)
 old_end = time.time()
 old_lapse = old_end - old_start
-print('Old mapping method length of execution: {0}'.format(old_lapse))
+print('Old mapping method execution time: {0:.2f}'.format(old_lapse))
 '''
 
+'''
 def sframe(frame):
     from turicreate import SFrame
     sf = SFrame(frame)
     sf.explore()
     sf.show()
     return
+'''
 
-# Dataset of sequence with top 5 predicted in/del   
-pred_set = np.concatenate((sequences,y_true,top5),axis=1)
-pred_set_headers = ['Sequence', 'Actual Result','Predicted Most Likely in/del','2nd','3rd','4th','5th']
+# Dataset of sequence with top 5 predicted in/del
+pred_set = np.concatenate((crisprs,sequences,y_true,top5),axis=1)
+pred_set_headers = ['Crispr','Reference Sequence', 'Actual Result','Predicted in/del','2nd','3rd','4th','5th']
 frame = pd.DataFrame(pred_set, columns=pred_set_headers)
 sframe(frame)
 
@@ -397,26 +425,45 @@ if user_observation is not None:
     encoded_user_top5 = (-user_proba).argsort()[:,0:5]
     user_top5_prob = np.sort(-user_proba)[:,0:5] * -100
     user_top5 = vfunc(encoded_user_top5, output_dict)
-    user_headers = ['Reference Sequence','Most likely','%','2nd','2%','3rd','3%','4th','4%','5th','5%']
+    user_headers = ['Crispr','Reference Sequence','Most likely','%','2nd','2%','3rd','3%','4th','4%','5th','5%']
     user_sequence = np.apply_along_axis( mapping, axis=1, arr=user_observation).reshape(-1,1)
+    user_crispr = np.apply_along_axis( seq_to_crispr, axis=1, arr=user_sequence).reshape(-1,1)
     
     arraysss = []
     for x in range(5):
         arraysss.extend([int(user_top5[:,x]), '{0}%'.format(int(user_top5_prob[:,x]))])
 
-    user_set = np.concatenate((user_sequence, [arraysss]),axis=1)
+    user_set = np.concatenate((user_crispr, user_sequence, [arraysss]),axis=1)
     user_frame = pd.DataFrame(user_set,columns=user_headers)
     sframe(frame=user_frame)
+        
+    pred_percentage = user_proba * 100
+    pred_percentage = pred_percentage.reshape(-1,1)
+    
+    '''
+    plt.title('a')
+    plt.xticks(mylist)
+    plt.plot(abc)
+    plt.show()
+    '''
+    
+    # output to static HTML file
+    output_file('classification.html')
+    # create a new plot with a title and axis labels
+    plot = figure(title="Chance of given in/del occuring", x_axis_label='x', y_axis_label='y')
+    # add a line renderer with legend and line thickness
+    plot.line(mylist, np.ravel(pred_percentage), legend="Percentage", line_width=2)
+    # show the results
+    show(plot)
 
 if cp:
     print("\n----------\n")
-    input("Press Enter to continue...")
-    print("\n----------\n")
+    input("Press Enter to continue...\n")
     save_csv = input("Do you wish to save csv of data? [Y/N] ")
 
     if save_csv.lower() is 'y' or 'yes':
         default = '{0}/machine-learning/predictions/classification/{1}_miseq_predictions'.format(home, date)
-        file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
+        file_name = input('Type path and file name [Press [ENTER] to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
 
 if path_to_tensorboard:
