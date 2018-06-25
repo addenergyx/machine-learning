@@ -1,8 +1,8 @@
 #! /usr/bin/perl
 
-# For classifcation must merge data before running preprocessing script, this is because each file would contain headers of different lengths due to varying sequence sizes. 
+# For the classifcation dataset containing sequences of different lenghts must merge data before running preprocessing script, this is because each file would contain headers of different lengths due to varying sequence sizes. 
 # The classifaction script handles this and uses the longest sequence size as the header.
-# For regression run script on the data first then merge the files
+# For regression dataset and classification when the number of bases is fixed (52bp) run scripts on each file individually before merging 
  
 use strict;
 use warnings;
@@ -29,7 +29,7 @@ foreach my $file (@ARGV) {
 	print "Stored file $file\n"; 	
 }
 
-my $filename = 'classification_50bp_miseq26_merged_data.csv'; 
+my $filename = 'miseq_classification_data.csv'; 
 unshift (@file, $headers);
 open my $out, '>', $filename or die $!;
 print "Copying files to output\n";

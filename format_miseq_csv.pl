@@ -7,8 +7,11 @@ use Text::CSV_XS;
 use Text::CSV::Slurp;
 use Getopt::Long;
 
+# Script to remove reference sequence column from dataset
+# Regression model doesn't need refernce sequence 
+
 GetOptions(
-	'tabs'			=>	\my $tabs,
+	'tabs'		=>	\my $tabs,
 	'files=s{1,}'	=>	\my @files,
 );
 

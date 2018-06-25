@@ -67,32 +67,32 @@ OUTER: foreach my $current_file (@raw_data) {
 		else { $new_file = 'neural_network_' . $current_file; }
 	}
 
-### NEED TO FIX ###
-# STDIN doesn't work properlly with forking
-#my $exit = 0;
-#if (! defined $force) {
-# Checks if file already exists
-#LABEL: if (-e $new_file) {
-#    warn "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
-#	my $input = <STDIN>;	
-#	chomp $input;
-#		if ($input =~ /^n$/i) {
-#			if ($n_files <= scalar @raw_data){
-#				goto OUTER;
-#			} else {
-#				die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
-#			}
-#		} elsif ($input !~ /^y$/i) {
-#			$exit++;
-#			if ($exit == 3) { 
-#				ERROR print "Too many failed attempts\n";
-#				exit(0);
-#			}
-#			goto LABEL;
-#		}
-#}
-#}
-###
+    ### NEED TO FIX ###
+    # STDIN doesn't work properlly with forking
+#    my $exit = 0;
+#    if (! defined $force) {
+        
+        # Checks if file already exists
+#        LABEL: if (-e $new_file) {
+#            warn "The output file '$new_file' already exists, do you wish to overwrite it? [Y/N] ";
+#	        my $input = <STDIN>;	
+#	        chomp $input;
+#		    if ($input =~ /^n$/i) {
+#			    if ($n_files <= scalar @raw_data){
+#				    goto OUTER;
+#			    } else {
+#				    die ERROR "The file '$new_file' exists, rename your output file using --output <filename>";
+#			    }
+#		    } elsif ($input !~ /^y$/i) {
+#			    $exit++;
+#			    if ($exit == 3) { 
+#				    ERROR print "Too many failed attempts\n";
+#				    exit(0);
+#			    }
+#			    goto LABEL;
+#		    }
+#        }
+#    }
 
 	my $sep_char = get_separator(
 									path	=>	$current_file,

@@ -23,11 +23,13 @@ if ( scalar(@files) == 0 ){
 chomp @files; # Removes new line from each filename
 
 foreach my $file (@files) {
+    # Using path from Miseq_ to alleles_frequency_table.txt as filename to keep miseq number and the exp
+    # Classification_data_preprocessing.pl will use this to match crisprs to files
     $file =~ s/\.\///;
     (my $name = $file) =~ s/\//_/g;
     $name =~ s/_CRISPResso[A-Za-z0-9_-]+\d//g;
     my $dest_path = "./alleles_frequency/$name";
-    # when using system commands it's best to use the absolute path of the command and not just cp as cp could be simply aliased to something else
+    # When using system commands it's best to use the absolute path of the command and not just cp as cp could be simply aliased to something else
     system("/bin/cp $file $dest_path");
     print "\nFile: $file has been copied\n";
 }
