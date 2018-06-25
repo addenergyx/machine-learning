@@ -12,7 +12,8 @@ cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: ~/machine-learning/csv/classification/classification_50bp_miseq26_merged_data.csv
+#sample: ~/data-preprocessing-worktree/data/merged_data/classification_52bp_miseq26_merged_data.csv
+sample: ~/data-preprocessing-worktree/data/merged_data/miseq_classification_data.csv
 #sample: ~/machine-learning/test.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
@@ -25,7 +26,7 @@ sample: ~/machine-learning/csv/classification/classification_50bp_miseq26_merged
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
-predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG
+predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5

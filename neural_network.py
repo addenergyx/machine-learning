@@ -36,7 +36,7 @@ optional functions and if statments like generator_batch()
 home = expanduser("~")
 date = strftime("%d-%m-%y")
 
-#Command-Line Option and Argument Parsing
+#Command-Line Options and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
@@ -514,7 +514,7 @@ if cp:
 
     frame = build_csv(test_aligned_sequence, sc)
     print("\n----------\n")
-    save_csv = input("Do you wish to save csv of data? [Y/N] ")
+    save_csv = input("Do you wish to save csv of data? ([Y]/N) ")
 
     if save_csv.lower() is 'y' or 'yes':
         default = '{0}/machine-learning/predictions/regression/{1}_miseq_predictions'.format(home, date)
