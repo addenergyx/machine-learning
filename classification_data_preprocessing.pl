@@ -9,41 +9,47 @@ use Getopt::Long;
 use Log::Log4perl qw( :easy );
 Log::Log4perl->easy_init( $INFO );
 use Try::Tiny;
+use Parallel::ForkManager;
+
+my $procs = `nproc --all`;
 
 GetOptions(
     'sample=s{1,}' => \my @raw_data,
     'output=s'     => \my $new_file,
+    'procs=i'      => \$procs,
 	'ins'          => \my $ins,
     'dels'         => \my $dels,
 ) or die("Command line argument error\n");
 
+my $pm = Parallel::ForkManager->new($procs);
+
 if (scalar @raw_data == 0){@raw_data = @ARGV}
 
-foreach my $current_file (@raw_data) {
-
-	if (! defined $new_file) {
+OUTER: foreach my $current_file (@raw_data) {
+    my $pid = $pm->start and next OUTER;
+	
+    if (! defined $new_file) {
     	if ($ins) {
-       		$new_file = 'classification_50bp_neural_network_insertions_' . $current_file;
+       		$new_file = 'classification_52bp_neural_network_insertions_' . $current_file;
    		} elsif ($dels) {
-       		$new_file = 'classification_50bp_neural_network_deletions_' . $current_file;
+       		$new_file = 'classification_52bp_neural_network_deletions_' . $current_file;
    		} else {
-       		$new_file = 'classification_50bp_neural_network_' . $current_file;
+       		$new_file = 'classification_52bp_neural_network_' . $current_file;
     	}
 	}
 
-# Only Miseq 19 onwards has ref sequence in data due to crispresso update and have tab separators so don't need default csv
-# Won't need forking because the csvs' are merged into one csv (7798000+ results) before running this script.
-# Some results have double quotes in them so needed to change quote and escape char defaults so that the result wasn't taken as one string
+# Only Miseq 19 onwards has ref sequence in data due to crispresso update and are tab separated
+# Don't need forking because the csvs' are merged into one csv (7798000+ results) before running this script.
+# Some results have double quotes in them so needed to change quote and escape char defaults so that the result were not taken as one string
 	my $csv = Text::CSV_XS->new ({sep_char  =>  "\cI", quote_char => "?", escape_char => "?"}) or die Text::CSV_XS->error_diag();
 
-# Miseq_Plate_Crispr_Map.csv contains all the crisprs relating to each experiment
+    # Miseq_Plate_Crispr_Map.csv contains all the crisprs relating to each experiment
 	my $crispr_map_csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
 	my $crispr;
 	
-	# Experiment names are unique
+	# Gets Experiment name from filename, Experiment names are unique
 	my ($exp) = $current_file =~ /(?<=exp)(.*)(?=_Alleles)/gi;
-
-	open (my $crispr_map, '<', '/home/ubuntu/machine-learning/Miseq_Plate_Crispr_Map.csv') or die "Can not find Crispr mapping CSV";
+	open (my $crispr_map, '<', '/home/ubuntu/data-preprocessing-worktree/data/Miseq_Plate_Crispr_Map.csv') or die "Can not find Miseq_Plate_Crispr_Map.csv";
 	my $map_headers = $crispr_map_csv->getline($crispr_map);
 	
 	my @crispr_header = $crispr_map_csv->column_names(@{$map_headers});
@@ -52,19 +58,23 @@ foreach my $current_file (@raw_data) {
 		my $experiment = $row->{'Experiment'};
 		if (lc($exp) eq lc($experiment)) {
 			$crispr = $row->{'CRISPR'};
-			INFO "Found crispr related to experiment from Miseq_Plate_Crispr_Map.csv";
+			INFO "Found crispr '$crispr' related to experiment $experiment from Miseq_Plate_Crispr_Map.csv";
 			last MAPPER;
-		} 
+		}
+        # If no matching crispr is found need to undefine crispr
+        undef $crispr;
 	}
 	
 	close $crispr_map;
-	
-	if (! defined $crispr) {
-		print "No crispr relating to experiment $exp found, please add experiment and crispr to Miseq_Plate_Crispr_Map.csv or continue and script will search database for an appropriate crispr";
-		print "\nPress <Enter> to continue or Ctrl-C to quit: ";
-		my $input = <STDIN>;
-		exit if lc($input) eq "q\n";
-	}
+
+### FIX STDIN doesn't work with forking, keeps looping ### 	
+#	if (! defined $crispr) {
+#		print "No crispr relating to experiment $exp found, please add experiment and crispr to Miseq_Plate_Crispr_Map.csv or continue and script will search database for an appropriate crispr";
+#		print "\nPress <Enter> to continue or Ctrl-C to quit: ";
+#		my $input = <STDIN>;
+#		$pm->finish and goto OUTER if lc($input) eq "q";
+#	}
+###
 
 	my @position;
 	my @list_of_positions; 
@@ -115,7 +125,7 @@ foreach my $current_file (@raw_data) {
 	}
 	
 	# Only necessary when printing out sequences of different lengths
-	INFO "Searching data for longest sequence";
+	#INFO "Searching data for longest sequence";
 	foreach my $row (@list_of_positions) {
 		if (scalar @{$row} > scalar @position) {@position = @{$row}}	
 	}
@@ -126,7 +136,7 @@ foreach my $current_file (@raw_data) {
 
     	open (my $out, '>', $new_file) or die "Could not create file '$new_file': $!\n";
     	try {
-			INFO "Writing data into file";
+			INFO "Writing data into file $new_file";
         	my $slurp = Text::CSV::Slurp->create(input => \@dataset, field_order => \@position);
         	print $out $slurp;
         	INFO "Data stored into new neural network file '$new_file'";
@@ -135,10 +145,12 @@ foreach my $current_file (@raw_data) {
     	};
     	close $out;
 	} else { 
-		print "No data made to put in file\nDone...\n"; 
+		print "\nNo data created from file $current_file\n"; 
 	}
 	undef $new_file;
+    $pm->finish;
 }
+$pm->wait_all_children;
 
 sub variables {
 
@@ -151,14 +163,13 @@ sub variables {
 	
 	unless(! defined $crispr) { $crispr_start = index(lc($ref), lc($crispr)) }
 	# Sometimes the wrong crispr can be given for an experiment. If so must search through all 
-	# crisprs in csv for a match. If no matches found drop observation. Most if not all crisprs 
-	# for Miseq 19 are wrong
+	# crisprs in csv for a match. If no matches are found the observation is dropped. Most if not all crisprs for Miseq 19 are wrong
 
 	if (! defined $crispr_start || $crispr_start == -1 ) {
 
 		my $crispr_map_csv = Text::CSV_XS->new() or die Text::CSV_XS->error_diag();
 	
-		open (my $crispr_map, '<', '/home/ubuntu/machine-learning/Miseq_Plate_Crispr_Map.csv') or die "Can not find Crispr mapping CSV";
+		open (my $crispr_map, '<', '/home/ubuntu/data-preprocessing-worktree/data/Miseq_Plate_Crispr_Map.csv') or die "Can not find Crispr mapping CSV";
 		my $map_headers = $crispr_map_csv->getline($crispr_map);
 	
 		my @crispr_header = $crispr_map_csv->column_names(@{$map_headers});
@@ -166,7 +177,7 @@ sub variables {
 		RECOVERY: while (my $row = $crispr_map_csv->getline_hr($crispr_map)) {
 			$crispr = $row->{'CRISPR'};
 			if (index(lc($ref), lc($crispr)) != -1) {
-				print "CRISPR '$crispr' from experiment $row->{'Experiment'} is found in the reference sequence\n";
+				#print "CRISPR '$crispr' from experiment $row->{'Experiment'} is found in the reference sequence\n";
 				$crispr_start = index(lc($ref), lc($crispr));
 				last RECOVERY; 
 			} else {
@@ -179,9 +190,9 @@ sub variables {
 	# Bad idea to try to alter the control of a loop externally like this
 	#if (! defined $crispr) { next ROW }
 
-	# drop row if can't find a crispr for reference sequence
+	# Drop row if can't find a crispr for reference sequence
 	if (! defined $crispr) { 
-		print "Could not find crispr for reference sequence in database, dropping row: $x\n";
+		#print "Could not find crispr in reference sequence from database, dropping row: $x\n";
 		return 
 	}
 	
@@ -196,7 +207,7 @@ sub variables {
 	my $start = $crispr_start - (50 - $size);	
 
 	# +3 to include pam
-	my $site = substr $ref, $start, 50;
+	my $site = substr $ref, $start, 52;
 
 	my @features = ($site =~ m/..?/g);
 	
@@ -209,8 +220,8 @@ sub variables {
     }
 	
 	#$crispr = lc($crispr);
-	print "$crispr\n$crispr_start\n$crispr_length\n$ref\n";
-	print "50 bases: $site\n";
+	#print "$crispr\n$crispr_start\n$crispr_length\n$ref\n";
+	#print "52 base pairs: $site\n";
 
 	return (@features, $output);
 	
