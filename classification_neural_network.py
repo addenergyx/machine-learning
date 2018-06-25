@@ -17,11 +17,11 @@ from keras.callbacks import History, TensorBoard, TerminateOnNaN, ModelCheckpoin
 import re
 import animation
 import subprocess
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from bokeh.plotting import figure, output_file, show
 from keras.models import load_model
 from turicreate import SFrame
-
+import gc
 
 '''
 Put modules at the top instead of within functions as the latter will make 
@@ -33,7 +33,7 @@ optional functions and if statments like sframe()
 home = expanduser("~")
 date = time.strftime("%d-%m-%y")
 
-#Command-Line Option and Argument Parsing
+#Command-Line Options and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.cn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
@@ -79,7 +79,10 @@ print("\n----------\n")
 #Preparing data
 
 #Importing dataset
+print("Loading Data To Memory...\n")
 dataset = pd.read_csv(sample)
+# dtype category is alot faster to go through then object 
+dd = pd.read_csv(sample, dtype='category')
 
 #y column
 # .iloc is purely integer-location based indexing for selection by position
@@ -89,38 +92,39 @@ outputset = dataset.iloc[:,-1]
 # Drop output column from dataset
 dataset = dataset.drop(dataset.columns[-1], axis=1)
 
-no_of_bases = len(dataset.columns)
+no_of_basepairs = len(dataset.columns)
 
 #user_observation = ['TG','AG','AA','AA','CC','AA','AC','AG','GG','TG','TG','GC','AG','AA','GC','AG','CA','GG','AA','AG','AC','AA','AA','GA','GG']
 
 # Appending user observation to dataset so it can be encoded in the same way as the dataset
-# Can only parse data that has been encoded in the same way as the dataset to classifer.predict() 
-'''
-One issue with using this method for prediction based on user sequence 
-is that predictions can't be made based on a loaded model. As a result the user
-would have to wait for the model to be trained again to get the result.
-This can take up to 10 minutes 
-'''
+# Can only pass data that has been encoded in the same way as the dataset to classifer.predict() 
+
 if user_observation:
     # Single observations
     str_observation = ','.join(user_observation)
     user_observation = [i for i in str_observation.split(',')]
     # Have to name columns in dataframes to be able to append rows 
-    columns = list(range(1,26))
+    columns = list(range(1,no_of_basepairs + 1))
     dataset.columns = columns
     user_series = pd.Series(user_observation, index=columns)
     dataset = dataset.append(user_series, ignore_index=True)
-
+    
 #Using one hot encoding with drop first columns to avoid dummy variable trap
+print("Encoding features...\n")
 non_dropout_dataset = pd.get_dummies(dataset, drop_first=False)
+full_headers = list(non_dropout_dataset)
+
+#del non_dropout_dataset
+del non_dropout_dataset
+gc.collect()
+
 dataset = pd.get_dummies(dataset,drop_first=True)
 headers = list(dataset)
-full_headers = list(non_dropout_dataset)
 
 length_X = len(dataset.columns) + 1
 
 # Returns the encoded user observation and original dataset
-if user_observation:
+if user_observation: 
     dataset,user_observation=dataset.drop(dataset.tail(1).index),dataset.tail(1)
 
 #ordered unique output possibilities
@@ -137,14 +141,11 @@ for x in range(len(myset)):
     myset.remove(value)
     output_dict[key] = value
 
-'''
-if user_observation:
-    user_observation, X = dataset.iloc[-1:], dataset.iloc[:-1]
-else:
-'''
-
 #Input layer
 X = dataset.iloc[: , 0:length_X].values
+
+del dataset
+gc.collect()
 
 #Number of inputs
 input_dim = len(X[0])
@@ -157,21 +158,32 @@ Y_vector = labelencoder_output.fit_transform(outputset)
 Y_vector = Y_vector.reshape(-1,1)
 
 # one-vs-all
+print("Categorizing Possible Output...\n")
 dummy_y = to_categorical(Y_vector)
+
+del Y_vector, outputset
+gc.collect()
 
 #from numpy import argmax
 #a = argmax(dummy_y, axis=1)
 
 #Spliting dataset
-X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.3, random_state=42)
+# When using large datasets test size can be reduced. For example if a dataset 
+# has 10 million lines, taking out 3 million for testing will be overkill. 1 million or
+# even 500,000 will be enough
+print("Spliting test and training data...\n")  
+X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.1, random_state=42)
+
+del X, dummy_y
+gc.collect()
 
 # Number of catagories
 y_catagories = len(Y_test[0])
 #number of rows - outcome_size = len(Y_test)
 
-#Feature scaling
 '''
-don't need to feature scale because all results are binary
+#Feature scaling
+don't need to feature scale because all data is binary
 from sklearn.preprocessing import StandardScaler
 sc = StandardScaler()
 X_train = sc.fit_transform(X_train)
@@ -223,7 +235,7 @@ else:
     #Save loss function progress
     history = History()
     
-    #Model stops if loss function is nan, this happens when there is missing data
+    #Model stops if loss function is nan, this happens when there is missing data or memory error
     terminate_on_nan = TerminateOnNaN()
     
     #Save model
@@ -231,7 +243,7 @@ else:
     
     tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
     
-    classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000)
+    classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000000)
     
     def tensorboard_callback():
         callbacks=[history, tensorboard, terminate_on_nan]
@@ -276,7 +288,13 @@ else:
     '''
     
     start = time.time()
-    classifier.fit(X_train,Y_train, callbacks=switch_case_callbacks(x=True))
+    #def f():
+    classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
+    #   return
+    
+    #mem_usage = memory_usage(f, max_usage=True)
+    #print('Maximum memory usage: %s' % max(mem_usage))
+    
     end = time.time()
     time_completion = (end - start) / 60
     print('Model completion time: {0:.2f} minutes'.format(time_completion))
@@ -314,19 +332,19 @@ for x in range(len(headers)):
     seq_dict[key] = value
 
 # Test sequence: TGAGAAAACCAAACAGGGTGTGGCAGAAGCAGCAGGAAAGACAAAAGAGG
-a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
+#a_seq = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
 #b_seq = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
 # For testing swap x in mapping function enumerate(x) with a_seq 
 # and execute lines inside function (not the function itself) 
 
 # Index only searches through the list for the first instance 
-#To find more matches using list comprehension
+# To find more matches using list comprehension instead
 #a_seq.index(0)
 
 missing_base_dict = {}
 
 # Finds all the first occurences of each base possibility
-for x in range(1, no_of_bases + 1):
+for x in range(1, no_of_basepairs + 1):
     key = x
     value = next (i for i in full_headers if re.match(str(x),i))
     missing_base_dict[key] = value
@@ -334,12 +352,12 @@ for x in range(1, no_of_bases + 1):
 # Mapping sequence
 def mapping(x):
     bases = {}
-    for i, e in enumerate(a_seq):
+    for i, e in enumerate(x):
         if e == 1:
             parts = seq_dict[i].split("_")
             bases[int(parts[0])] = parts[1]
-    results = [""] * 26
-    for i in range(1, 26):
+    results = [""] * (no_of_basepairs + 1)
+    for i in range(1, (no_of_basepairs + 1)):
         if i in bases:
             results[i] = bases[i]
         else:
@@ -351,7 +369,7 @@ def seq_to_crispr(x):
     crispr = str(x)[30:50]
     return crispr
 
-
+'''
 ### old functions for mapping ###
 def seq_map_func(val, dictionary):
     return dictionary[val] if val in dictionary else val
@@ -362,7 +380,7 @@ def old_mapping(x):
     bases = [i for i, e in enumerate(x) if e == 1]
     ordered_bases = vfunc2(bases,seq_dict)
         
-    for i in range(1, no_of_bases + 1):
+    for i in range(1, no_of_basepairs + 1):
         #basestr = str(ordered_bases[i-1])
         try:
             if str(ordered_bases[i-1]).startswith('{0}_'.format(i)) is False:
@@ -375,6 +393,7 @@ def old_mapping(x):
         ordered_bases[base] = re.sub("\d+_","",ordered_bases[base])
     seq = ''.join(ordered_bases)
     return seq
+'''
 
 print("\n----------\n")
 wait = animation.Wait(text='Remapping data')
@@ -395,29 +414,16 @@ old_start = time.time()
 sequences = np.apply_along_axis( old_mapping, axis=1, arr=X_test).reshape(-1,1)
 old_end = time.time()
 old_lapse = old_end - old_start
-print('Old mapping method execution time: {0:.2f}'.format(old_lapse))
+print('Old mapping method execution time: {0:.2f} seconds'.format(old_lapse))
 '''
 
 '''
-def sframe(frame):
-    from turicreate import SFrame
-    sf = SFrame(frame)
-    sf.explore()
-    sf.show()
-    return
-'''
-
 # Dataset of sequence with top 5 predicted in/del
 pred_set = np.concatenate((crisprs,sequences,y_true,top5),axis=1)
 pred_set_headers = ['Crispr','Reference Sequence', 'Actual Result','Predicted in/del','2nd','3rd','4th','5th']
 frame = pd.DataFrame(pred_set, columns=pred_set_headers)
 sframe(frame)
-
 '''
-could look into making the display more meaningful data such as a colour coding 
-for the percentage given by the y_prob matrix or colour coding based on the 
-range of the dataset similar to when viewing the top5 variable in spyder
-''' 
 
 if user_observation is not None:    
     #user_observation = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
@@ -440,13 +446,6 @@ if user_observation is not None:
     pred_percentage = user_proba * 100
     pred_percentage = pred_percentage.reshape(-1,1)
     
-    '''
-    plt.title('a')
-    plt.xticks(mylist)
-    plt.plot(abc)
-    plt.show()
-    '''
-    
     # output to static HTML file
     output_file('classification.html')
     # create a new plot with a title and axis labels
@@ -459,7 +458,7 @@ if user_observation is not None:
 if cp:
     print("\n----------\n")
     input("Press Enter to continue...\n")
-    save_csv = input("Do you wish to save csv of data? [Y/N] ")
+    save_csv = input("Do you wish to save csv of data? ([Y]/N)")
 
     if save_csv.lower() is 'y' or 'yes':
         default = '{0}/machine-learning/predictions/classification/{1}_miseq_predictions'.format(home, date)
