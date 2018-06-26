@@ -6,24 +6,31 @@ use warnings;
 use Text::CSV_XS;
 use Text::CSV::Slurp;
 use Getopt::Long;
+use Text::CSV::Separator qw(get_separator);
 
 # Script to remove reference sequence column from dataset
 # Regression model doesn't need refernce sequence 
 
 GetOptions(
-	'tabs'		=>	\my $tabs,
 	'files=s{1,}'	=>	\my @files,
 );
 
-my $csv = Text::CSV_XS->new or die Text::CSV_XS->error_diag;
-my $tsv = Text::CSV_XS->new ({sep_char	=>	"\cI"}) or die Text::CSV_XS->error_diag;
-
-if ($tabs){$csv = $tsv}
 my @dataset;
 
 if (scalar @files == 0){@files = @ARGV}
 
 foreach my $file (@files) {
+
+    my $sep_char = get_separator(
+                                    path    =>  $file,
+                                    include =>  ["\cI"],
+                                    lucky   =>  1,
+                                );
+ 
+    if (! defined $sep_char){ die "Could not determine separator in CSV" }
+
+    my $csv = Text::CSV_XS->new ({sep_char  =>  $sep_char}) or die Text::CSV_XS->error_diag();
+
 	open (my $fh, '<', $file) or die "'$file':$!\n";
 	my $headers = $csv->getline($fh);
 	$csv->column_names(@{$headers});
@@ -40,7 +47,7 @@ foreach my $file (@files) {
 	my $slurp = Text::CSV::Slurp->create(input=>\@dataset, field_order => \@{$headers});
 	print $out $slurp;
 	close $out;
-	print "Closed $file";
+	print "Closed $file\n";
 	# undef(@array) frees all the memory associated with the array
 	undef (@dataset); 
 }
