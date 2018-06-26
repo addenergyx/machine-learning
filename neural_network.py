@@ -36,7 +36,7 @@ optional functions and if statments like generator_batch()
 home = expanduser("~")
 date = strftime("%d-%m-%y")
 
-#Command-Line Option and Argument Parsing
+#Command-Line Options and Argument Parsing
 config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
@@ -353,6 +353,13 @@ else:
             X_train = build[3]
             Y_train = build[4]
 
+            '''
+            yield is the keyword in python used for generator expressions. 
+            It means that the next time the function is called the execution will 
+            start back up at the exact point it left off last time it was called
+            This is important for interating chunks of lines in a file or batches 
+            of files in a directory like above
+            '''
             yield (X_train, Y_train)
 
     # Keras's scikit-learn wrapper doesn't work with fit_generator so had to separate them
@@ -514,7 +521,7 @@ if cp:
 
     frame = build_csv(test_aligned_sequence, sc)
     print("\n----------\n")
-    save_csv = input("Do you wish to save csv of data? [Y/N] ")
+    save_csv = input("Do you wish to save csv of data? ([Y]/N) ")
 
     if save_csv.lower() is 'y' or 'yes':
         default = '{0}/machine-learning/predictions/regression/{1}_miseq_predictions'.format(home, date)
