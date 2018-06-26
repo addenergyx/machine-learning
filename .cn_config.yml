@@ -26,7 +26,11 @@ sample: ~/data-preprocessing-worktree/data/merged_data/miseq_classification_data
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
+<<<<<<< HEAD
 #predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
+=======
+predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
+>>>>>>> 26756191ef1c222a7b3391b168a3e90f81863190
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
