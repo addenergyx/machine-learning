@@ -80,9 +80,15 @@ print("\n----------\n")
 
 #Importing dataset
 print("Loading Data To Memory...\n")
-dataset = pd.read_csv(sample)
-# dtype category is alot faster to go through then object 
-dd = pd.read_csv(sample, dtype='category')
+#dataset = pd.read_csv(sample)
+# dtype category is alot faster to go through then object and reduces memory 
+# usage by 26%
+dtypes = {'1':'category','2':'category','3':'category','4':'category','5':'category','6':'category',
+          '7':'category','8':'category','9':'category','10':'category','11':'category','12':'category',
+          '13':'category','14':'category','15':'category','16':'category','17':'category','18':'category',
+          '19':'category','20':'category','21':'category','22':'category','23':'category','24':'category',
+          '25':'category','26':'category','ins/dels':'int'} 
+dataset = pd.read_csv(sample, dtype=dtypes, error_bad_lines=False)
 
 #y column
 # .iloc is purely integer-location based indexing for selection by position
@@ -90,6 +96,7 @@ dd = pd.read_csv(sample, dtype='category')
 outputset = dataset.iloc[:,-1]
 
 # Drop output column from dataset
+# Uses quite alot of memory when executed but returns it after
 dataset = dataset.drop(dataset.columns[-1], axis=1)
 
 no_of_basepairs = len(dataset.columns)
@@ -98,7 +105,6 @@ no_of_basepairs = len(dataset.columns)
 
 # Appending user observation to dataset so it can be encoded in the same way as the dataset
 # Can only pass data that has been encoded in the same way as the dataset to classifer.predict() 
-
 if user_observation:
     # Single observations
     str_observation = ','.join(user_observation)
@@ -107,16 +113,28 @@ if user_observation:
     columns = list(range(1,no_of_basepairs + 1))
     dataset.columns = columns
     user_series = pd.Series(user_observation, index=columns)
+    # This method makes a copy of the dataset and doesn't return memory back to 
+    # system even when deleted. Taking up a considerable amount of memory when 
+    # using a big dataset
     dataset = dataset.append(user_series, ignore_index=True)
     
 #Using one hot encoding with drop first columns to avoid dummy variable trap
 print("Encoding features...\n")
+# Pairs are encoded because strings can not be directly fed to a machine learning model
+# as machine learning models are based on mathematical equations
 non_dropout_dataset = pd.get_dummies(dataset, drop_first=False)
 full_headers = list(non_dropout_dataset)
 
-#del non_dropout_dataset
 del non_dropout_dataset
 gc.collect()
+
+missing_base_dict = {}
+
+# Finds all the first occurences of each base possibility
+for x in range(1, no_of_basepairs + 1):
+    key = x
+    value = next (i for i in full_headers if re.match(str(x),i))
+    missing_base_dict[key] = value
 
 dataset = pd.get_dummies(dataset,drop_first=True)
 headers = list(dataset)
@@ -141,28 +159,49 @@ for x in range(len(myset)):
     myset.remove(value)
     output_dict[key] = value
 
-#Input layer
+# Input layer
 X = dataset.iloc[: , 0:length_X].values
 
+# When dataframes are deleted the memory that was allocated to them can't be used
+# by the same program it was executed from unlike numpy arrays
 del dataset
 gc.collect()
 
-#Number of inputs
+# Number of inputs
 input_dim = len(X[0])
 
-#Encoding pairs
+# Encoding output
+# Unlike other Deep Learning frameworks When modeling multi-class classification 
+# problems in keras using neural networks, it is best to reshape the output 
+# from a vector to a binary matrix. Keras does not use integer labels for 
+# crossentropy loss, unless using sparse_crossentropy_loss
+# to_categorical doesn't work with -ve numbers so have to label encode the in/del
+# column first
+print("Categorizing Possible Output...\n")
 labelencoder_output = LabelEncoder()
-
 Y_vector = labelencoder_output.fit_transform(outputset)
-
 Y_vector = Y_vector.reshape(-1,1)
 
 # one-vs-all
-print("Categorizing Possible Output...\n")
-dummy_y = to_categorical(Y_vector)
+# uses too much memory
+dummy_y = to_categorical(Y_vector, num_classes=len(output_dict))
 
 del Y_vector, outputset
 gc.collect()
+
+# Save encoded data to csv, large datasets need to be encoded first 
+# then close and reopen the program with the new dataset  
+# this will take a while
+# Char is the smallest integer data type using only 1 btye compared to int which is 2 or 4 bytes
+# As the file only contains 0 or 1 char would be optimal for storage
+#np.savetxt("encoded_output.csv", dummy_y, delimiter=",", fmt='%c')
+#np.savetxt("encoded_input.csv", X, delimiter=",", fmt='%c' )
+
+import dask.dataframe
+inputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
+outputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
+inputset.to_csv('/home/ubuntu/machine-learning/input_data')
+outputset.to_csv('/home/ubuntu/machie-learning/output_data')
 
 #from numpy import argmax
 #a = argmax(dummy_y, axis=1)
@@ -171,6 +210,9 @@ gc.collect()
 # When using large datasets test size can be reduced. For example if a dataset 
 # has 10 million lines, taking out 3 million for testing will be overkill. 1 million or
 # even 500,000 will be enough
+
+#outputset = np.reshape([outputset],(-1,1))
+
 print("Spliting test and training data...\n")  
 X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.1, random_state=42)
 
@@ -178,7 +220,8 @@ del X, dummy_y
 gc.collect()
 
 # Number of catagories
-y_catagories = len(Y_test[0])
+#y_catagories = len(Y_test[0])
+y_catagories = len(mylist)
 #number of rows - outcome_size = len(Y_test)
 
 '''
@@ -213,7 +256,7 @@ else:
         classifier = Sequential()
         
         #Input layer and first hidden layer with dropout
-        classifier.add(Dense(units=200, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
+        classifier.add(Dense(units=200, kernel_initializer='uniform',activation='relu',input_dim=376))
         classifier.add(Dropout(rate=0.1))
         
         #Hidden layer 2 with dropout
@@ -221,13 +264,14 @@ else:
         classifier.add(Dropout(rate=0.1))
         
         #Output layer
-        classifier.add(Dense(units=y_catagories, kernel_initializer='uniform', activation='sigmoid'))
+        classifier.add(Dense(units=220, kernel_initializer='uniform', activation='sigmoid'))
         
         #Complie model
         # Categorical crossentropy wouldn't be appropriate here as it looks at the probabilty
         # in relation of the other categories
         # Chose binary crossentropies because it is not a probability distribution over the labels 
-        # but individual probabilities over every label    
+        # but individual probabilities over every label
+        # 
         classifier.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics = ['accuracy'])
         
         return classifier
@@ -243,7 +287,7 @@ else:
     
     tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
     
-    classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000000)
+    #classifier = KerasClassifier(build_fn=build_classifier, epochs=24, batch_size=1000)
     
     def tensorboard_callback():
         callbacks=[history, tensorboard, terminate_on_nan]
@@ -289,7 +333,7 @@ else:
     
     start = time.time()
     #def f():
-    classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
+    #classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
     #   return
     
     #mem_usage = memory_usage(f, max_usage=True)
@@ -298,6 +342,52 @@ else:
     end = time.time()
     time_completion = (end - start) / 60
     print('Model completion time: {0:.2f} minutes'.format(time_completion))
+    
+    
+    def generator(encoded_input,encoded_output,chunk_size=1000000):
+        while True:
+            with open(encoded_input,'rt') as x, open(encoded_output,'rt') as y:
+                for a,b in zip(x,y):
+                    inputa = [int(i) for i in a.split(",")]
+                    outputb = [int(j) for j in b.split(",")]
+                    print(x)
+                    yield (inputa,outputb)
+    
+    '''                      
+    import csv
+    x = open(encoded_input)
+    y = open(encoded_output)         
+    data = []
+    datay = []
+    def generator(encoded_input,encoded_output,chunk_size=1000000):
+        inputdata = []
+        outputdata = []
+        counter = 0      
+        while True:
+            #chunk = x.read(chunk_size)
+            #piece = y.read(chunk_size)
+            
+            reader = csv.reader(x)            
+            readery = csv.reader(y)
+
+            for row,rowy in zip(reader,readery):
+                data.append(list(map(int,row)))
+                datay.append(list(map(int,rowy)))
+                counter = (counter + 1)
+                if counter == 1000:
+                    break
+                
+            inputdata = np.array(data)
+            outputdata = np.array(datay)
+
+            yield (inputdata,outputdata)    
+    '''       
+             
+    model = build_classifier()
+
+    model.fit_generator(generator(encoded_input='encoded_input.csv',encoded_output='encoded_output.csv'),
+                        steps_per_epoch=1, epochs=10, callbacks=switch_case_callbacks(x=True))
+                    
 
 #probability of different outcomes
 y_prob = classifier.predict_proba(X_test)
@@ -341,13 +431,7 @@ for x in range(len(headers)):
 # To find more matches using list comprehension instead
 #a_seq.index(0)
 
-missing_base_dict = {}
 
-# Finds all the first occurences of each base possibility
-for x in range(1, no_of_basepairs + 1):
-    key = x
-    value = next (i for i in full_headers if re.match(str(x),i))
-    missing_base_dict[key] = value
     
 # Mapping sequence
 def mapping(x):
@@ -454,7 +538,7 @@ if user_observation is not None:
     plot.line(mylist, np.ravel(pred_percentage), legend="Percentage", line_width=2)
     # show the results
     show(plot)
-
+'''
 if cp:
     print("\n----------\n")
     input("Press Enter to continue...\n")
@@ -464,7 +548,7 @@ if cp:
         default = '{0}/machine-learning/predictions/classification/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press [ENTER] to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
-
+'''
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
