@@ -259,9 +259,9 @@ else:
         #Input layer and first hidden layer with dropout
         regressor.add(Dense(units=10, kernel_initializer='uniform',activation='relu',input_dim=input_dim))
 
-        """General tip for the number of nodes in the input layer is that it should be the
+        """General tip for the number of nodes in the hidden layer is that it should be the
         average of the number of nodes in the input and output layer. However this may
-        be changed later when parameter tuning using cross validation"""
+        be changed later when parameter tuning using GridsearchCV"""
         regressor.add(Dropout(rate=0.1))
 
         #Hidden layer 2 with dropout

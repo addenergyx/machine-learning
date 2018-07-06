@@ -13,20 +13,25 @@ cpu: -1
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
 #sample: ~/data-preprocessing-worktree/data/merged_data/classification_52bp_miseq26_merged_data.csv
-sample: ~/data-preprocessing-worktree/data/merged_data/miseq_classification_data.csv
+#sample: ~/data-preprocessing-worktree/data/merged_data/miseq_classification_data.csv
 #sample: ~/machine-learning/test.csv
+sample: encoded_input.csv
 
-# Path to directory of the files for example '/machine-learning/smallsamplefiles/'
-# Use batch instead of 'sample' if you want to analyse multiple files in the same model
-# Batch flag will override sample flag 
-#batch: /home/ubuntu/machine-learning/smallsamplefiles/
+# File containing encoded output, must be supplied when using batch. Input file goes with --sample
+output: encoded_output.csv
+
+# Batch mode
+# Use batch mode when data is too big to fit into memory, point --sample to encoded input file and --output to encoded output file
+# Can encode data using encode_data.py
+# DO NOT USE --predict when using batch mode 
+batch: 1 
 
 # Path to save model (Default: ~/machine-learning/snapshots/classification/{date}_trained_model.h5)
 #save:
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
-predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
+#predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
