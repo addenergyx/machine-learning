@@ -158,6 +158,11 @@ for x in range(len(myset)):
     value =  min(myset)
     myset.remove(value)
     output_dict[key] = value
+    
+# Number of catagories
+#y_categories = len(Y_test[0])
+y_categories = len(mylist)
+#number of rows - outcome_size = len(Y_test)
 
 # Input layer
 X = dataset.iloc[: , 0:length_X].values
@@ -184,7 +189,7 @@ Y_vector = Y_vector.reshape(-1,1)
 
 # one-vs-all
 # uses too much memory
-dummy_y = to_categorical(Y_vector, num_classes=len(output_dict))
+dummy_y = to_categorical(Y_vector)
 
 del Y_vector, outputset
 gc.collect()
@@ -194,14 +199,13 @@ gc.collect()
 # this will take a while
 # Char is the smallest integer data type using only 1 btye compared to int which is 2 or 4 bytes
 # As the file only contains 0 or 1 char would be optimal for storage
-#np.savetxt("encoded_output.csv", dummy_y, delimiter=",", fmt='%c')
-#np.savetxt("encoded_input.csv", X, delimiter=",", fmt='%c' )
-
-import dask.dataframe
-inputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
-outputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
-inputset.to_csv('/home/ubuntu/machine-learning/input_data')
-outputset.to_csv('/home/ubuntu/machie-learning/output_data')
+#np.savetxt("encoded_output.csv", dummy_y, delimiter=",", fmt='%d')
+#np.savetxt("encoded_input.csv", X, delimiter=",", fmt='%d' )
+#import dask.dataframe
+#inputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
+#outputset = dask.dataframe.read_csv('/home/ubuntu/encoded_input.csv')
+#inputset.to_csv('/home/ubuntu/machine-learning/input_data')
+#outputset.to_csv('/home/ubuntu/machie-learning/output_data')
 
 #from numpy import argmax
 #a = argmax(dummy_y, axis=1)
@@ -219,10 +223,6 @@ X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.1, r
 del X, dummy_y
 gc.collect()
 
-# Number of catagories
-#y_catagories = len(Y_test[0])
-y_catagories = len(mylist)
-#number of rows - outcome_size = len(Y_test)
 
 '''
 #Feature scaling
@@ -333,9 +333,8 @@ else:
     
     start = time.time()
     #def f():
-    #classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
+    classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
     #   return
-    
     #mem_usage = memory_usage(f, max_usage=True)
     #print('Maximum memory usage: %s' % max(mem_usage))
     
@@ -343,15 +342,19 @@ else:
     time_completion = (end - start) / 60
     print('Model completion time: {0:.2f} minutes'.format(time_completion))
     
+    #https://keras.io/models/sequential/#fit_generator
     
-    def generator(encoded_input,encoded_output,chunk_size=1000000):
+    def generator(encoded_input,encoded_output):
         while True:
             with open(encoded_input,'rt') as x, open(encoded_output,'rt') as y:
                 for a,b in zip(x,y):
                     inputa = [int(i) for i in a.split(",")]
                     outputb = [int(j) for j in b.split(",")]
-                    print(x)
-                    yield (inputa,outputb)
+                    X_train = np.array(inputa).reshape(1,-1)
+                    Y_train = np.array(outputb).reshape(1,-1)
+                    yield (X_train,Y_train)
+            x.close()
+            y.close()
     
     '''                      
     import csv
@@ -382,12 +385,12 @@ else:
 
             yield (inputdata,outputdata)    
     '''       
-             
+            
     model = build_classifier()
 
     model.fit_generator(generator(encoded_input='encoded_input.csv',encoded_output='encoded_output.csv'),
-                        steps_per_epoch=1, epochs=10, callbacks=switch_case_callbacks(x=True))
-                    
+                        steps_per_epoch=60000000, epochs=1, callbacks=switch_case_callbacks(x=True))
+                 
 
 #probability of different outcomes
 y_prob = classifier.predict_proba(X_test)
@@ -430,7 +433,6 @@ for x in range(len(headers)):
 # Index only searches through the list for the first instance 
 # To find more matches using list comprehension instead
 #a_seq.index(0)
-
 
     
 # Mapping sequence
@@ -525,6 +527,7 @@ if user_observation is not None:
 
     user_set = np.concatenate((user_crispr, user_sequence, [arraysss]),axis=1)
     user_frame = pd.DataFrame(user_set,columns=user_headers)
+    #user_frame.to_csv('user_pred data.csv',header=False,index=False)
     sframe(frame=user_frame)
         
     pred_percentage = user_proba * 100
@@ -538,6 +541,7 @@ if user_observation is not None:
     plot.line(mylist, np.ravel(pred_percentage), legend="Percentage", line_width=2)
     # show the results
     show(plot)
+
 '''
 if cp:
     print("\n----------\n")
@@ -549,6 +553,7 @@ if cp:
         file_name = input('Type path and file name [Press [ENTER] to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)
 '''
+
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
