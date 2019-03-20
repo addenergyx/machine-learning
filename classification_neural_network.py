@@ -20,9 +20,10 @@ import subprocess
 #import matplotlib.pyplot as plt
 from bokeh.plotting import figure, output_file, show
 from keras.models import load_model
-from turicreate import SFrame
+from turicreate import SFrame #Currently no python3.7 support
 import gc
 import csv
+#import pickle #Module for saving Objects by serialization
 
 '''
 Put modules at the top instead of within functions as the latter will make 
@@ -44,7 +45,7 @@ config.add_argument('--sample', action='store', default=home + '/machine-learnin
                     help="Data to train and test model created by data_preprocessing.pl (default: 'classification_50bp_miseq26_merged_data.csv') If using batch file must be encoded input data.")
 config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/tensorboard/classification/{1}_classification_tensorboard'.format(home, date), 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
-config.add_argument('-s','--save', nargs='?', const=home + "/machine-learning/snapshots/classification/%s_classification_trained_model.h5" % date, help="Save model to disk")
+config.add_argument('-s','--save', nargs='?', const='{0}/data/machine-learning-data/machine-learning/snapshots/classification/{1}_classification_trained_model.h5'.format(home, date), help="Save model to disk")
 config.add_argument('-v','--verbose', action="store_true", help="Verbosity mode")
 config.add_argument('-p','--predict', nargs='+',
                     help="Can parse a single observation or file containing multiple observations to make predictions on. False = 0, True = 1. Must be in order: NHEJ,UNMODIFIED,HDR,n_mutated,a_count,c_count,t_count,g_count,gc_content,tga_count,ttt_count,minimum_free_energy_prediction,pam_count,length,frameshift,#Reads,%%Reads. For example: 0,1,0,0,68,77,39,94,68,2,1,-106.400001525879,26,278,0,1684,34.988572615")
@@ -130,7 +131,7 @@ if batch is False:
     
     missing_base_dict = {}
     
-    # Finds all the first occurences of each base possibility
+    # Finds all the first occurences of each basepair possibility
     for x in range(1, no_of_basepairs + 1):
         key = x
         value = next (i for i in full_headers if re.match(str(x),i))
@@ -212,7 +213,7 @@ if batch is False:
     
     #outputset = np.reshape([outputset],(-1,1))
     
-    print("Spliting test and training data...\n")  
+    print("Spliting testing and training data...\n")  
     X_train, X_test, Y_train, Y_test = train_test_split(X, dummy_y, test_size=0.1, random_state=42)
     
     del X, dummy_y
@@ -281,7 +282,7 @@ else:
     # Save model
     Checkpoint = ModelCheckpoint(cp, monitor='acc', verbose=verbose, save_best_only=True)
     
-    # 
+    # Creates tensorboard
     tensorboard = TensorBoard(log_dir=path_to_tensorboard, histogram_freq=0, write_graph=True, write_images=True)
     
     # Wrapper for sklearn, need this to use cross validation
@@ -491,6 +492,7 @@ sframe(frame)
 
 if user_observation is not None:    
     #user_observation = [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0]
+    yyy = np.array(user_observation)
     user_proba = classifier.predict_proba(np.array(user_observation))
     encoded_user_top5 = (-user_proba).argsort()[:,0:5]
     user_top5_prob = np.sort(-user_proba)[:,0:5] * -100
@@ -499,7 +501,7 @@ if user_observation is not None:
     user_sequence = np.apply_along_axis( mapping, axis=1, arr=user_observation).reshape(-1,1)
     user_crispr = np.apply_along_axis( seq_to_crispr, axis=1, arr=user_sequence).reshape(-1,1)
     
-    arraysss = []
+    arraysss = [] # Top 5 indels and precentage into list
     for x in range(5):
         arraysss.extend([int(user_top5[:,x]), '{0}%'.format(int(user_top5_prob[:,x]))])
 
@@ -521,12 +523,12 @@ if user_observation is not None:
     show(plot)
 
 
-if user_observation:
+if user_observation is not None:
     print("\n----------\n")
     input("Press Enter to continue...\n")
     save_csv = input("Do you wish to save csv of predicted data? ([Y]/N)")
 
-    if save_csv.lower() is 'y' or 'yes':
+    if save_csv.lower() == 'y' or 'yes':
         default = '{0}/machine-learning/predictions/classification/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press [ENTER] to keep default: {0}]:'.format(default))
         user_frame.to_csv(file_name or default ,index=False)
@@ -535,7 +537,11 @@ if user_observation:
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
-
-
-
-
+#pickle used to save classification of data - movce to flask_train.py later
+#file saved in same location as script running it
+#pickle_out = open("dict.pickle","wb")
+#pickle.dump(output_dict, pickle_out)
+#pickle_out.close()
+#pickle_out = open("headers.pickle","wb")
+#pickle.dump(headers, pickle_out)
+#pickle_out.close()
