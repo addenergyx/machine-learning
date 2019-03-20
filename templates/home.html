@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Home</title>
+	<!-- <link rel="stylesheet" type="text/css" href="../static/css/styles.css"> -->
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <script type="text/javascript">
+    function printIt(){
+        document.getElementById('comment').value="AGTCGCGGATGCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT"
+    }
+    </script>
+    <script type = "text/javascript">
+    function eraseText() {
+        document.getElementById("comment").value = "";
+    }
+</script>
+</head>
+
+<body>
+
+	<header>
+		<div class="container">
+		<div id="brandname">
+		</div>
+		<h2>Insertion/Deletion Prediction for Sequence Data</h2>
+
+	</div>
+	</header>
+
+	<div class="ml-container">
+		<p> This webapp will predict insertion/deletion spread of single strand DNA sequences using data provided by the Wellcome Sanger Institute. Currently limited to a 52 base sequence containing the <b>CRISPR</b> from bases 29 to 48 and the <b>PAM</b> from bases 49 to 51. Simply type or paste your sequence below and click Predict. You can test the server using <a id="sample" title="Click to paste sample" href="#" onclick="printIt();">this sample sequence.</a> </p>
+        
+		<form action="{{ url_for('predict')}}" method="POST">
+		<p>Paste or type your <b>sequence</b> here: <a id="clear" href="#" onclick="eraseText();">[clear]</a></p>
+		<!-- <input type="text" name="comment"/> -->
+		<textarea name="comment" id="comment" rows="1" cols="52" maxlength="52"></textarea>
+		<br/>
+
+		<input type="submit" class="btn-info" value="Predict">
+		
+	</form>
+		
+	</div>
+
+	
+	
+
+</body>
+</html>

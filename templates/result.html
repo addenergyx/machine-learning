@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+	<header>
+		<div class="container">
+		<div id="brandname">
+		</div>
+		<h2>Insertion/Deletion Prediction for Sequence Data</h2>
+		
+	</div>
+	</header>
+	<p style="color:blue;font-size:20;text-align: center;"><b>Results for sequence</b></p>
+	<div class="results">
+    <p>Prediction: </p>
+    <p>Most Likely: {{ prediction }}</p>
+    <p>Second: {{ p2 }}</p>
+    <p>Third: {{ p3 }}</p>
+    <p>Forth: {{ p4 }}</p>
+    <p>Fifth: {{ p5 }}</p>
+	</div>
+
+</body>
+</html>
