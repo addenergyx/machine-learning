@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from keras import backend as K
 import tensorflow as tf
-from keras.models import Sequential
 from keras.models import load_model
-from flask import jsonify
-from flask import Flask, render_template, url_for, request
-import pickle
+from flask import Flask, render_template, request #WebApp Framework
+import pickle #Used to get stored python objects from the trained classification model
+#By doing this don't need to train the model in the webapp.
 
+#Initialises flask application
 app = Flask(__name__)
 
+#Home page
 @app.route('/')
 def home():
 	return render_template('home.html')
@@ -20,6 +20,9 @@ def home():
 def get_model():
     global model, graph
     model = load_model('/home/ubu/flask_apps/data/flask_classification_trained_model.h5')
+    #Flask uses multiple threads. As a result the tensorflow model can not be loaded and 
+    #used in the same thread. One workaround is to force tensorflow to use the gloabl default graph .
+    #https://stackoverflow.com/questions/51127344/tensor-is-not-an-element-of-this-graph-deploying-keras-model
     graph = tf.get_default_graph() 
     print(" * Model loaded!")
 
@@ -29,9 +32,7 @@ def encodeData(userData):
     pairing = 2
     userData = userData.upper()
     userData = [userData[i:i+pairing] for i in range(0, len(userData), pairing)]
-    
-    #userData = ['TG','AG','AA','AA','CC','AA','AC','AG','GG','TG','TG','GC','AG','AA','GC','AG','CA','GG','AA','AG','AC','AA','AA','GA','GG','GA']
-    
+        
     #User data needs to be encoded in the same way as the training data
     #cross ref sequence with headers list
         
@@ -39,7 +40,7 @@ def encodeData(userData):
     pickle_in = open("data/headers.pickle","rb")
     headers = pickle.load(pickle_in)
     
-    #encodes user input
+    #encodes user input to match encoding of training data
     x = []
     for i in range(26):
         for j in headers:
@@ -61,36 +62,32 @@ vfunc = np.vectorize(map_func)
 print(" * Loading Keras model...")
 get_model()
 
-
-
+#Reults page
 @app.route("/predict", methods=['POST']) 
 def predict():
     
     if request.method == 'POST':
         userData = request.form['comment']
-        #userData = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         x = encodeData(userData)
         
-        #Gets classification of indel from model
+        #Gets classification of indel from output dictionary of the trained model
         pickle_in = open("data/dict.pickle","rb")
         output_dict = pickle.load(pickle_in)
         
         #Computational Graph
-        #Flask uses multiple threads. As a result the tensorflow model can not be loaded and 
-        #used in the same thread. One workaround is to force tensorflow to use the gloabl default graph .
-        #https://stackoverflow.com/questions/51127344/tensor-is-not-an-element-of-this-graph-deploying-keras-model
         with graph.as_default():
+            #Performs prediction
             user_proba = model.predict_proba(np.array(x).reshape(1,-1))
             encoded_user_top5 = (-user_proba).argsort()[:,0:5]
             #user_top5_prob = np.sort(-user_proba)[:,0:5] * -100
-            user_top5 = vfunc(encoded_user_top5, output_dict)    
+            user_top5 = vfunc(encoded_user_top5, output_dict)
+            #returns top 5 results to html
             return render_template('result.html', 
                                    prediction = user_top5[0][0], 
                                    p2 = user_top5[0][1], 
                                    p3 = user_top5[0][2],
                                    p4 = user_top5[0][3],
                                    p5 = user_top5[0][4],)
-
     
 if __name__ == '__main__':
 #    print(" * Loading Model")
@@ -98,8 +95,3 @@ if __name__ == '__main__':
 #    print(" * Model loaded!")
      #app.run(host='0.0.0.0', port=5000)
      app.run(debug=True)
-
-    
-    
-    
-    
