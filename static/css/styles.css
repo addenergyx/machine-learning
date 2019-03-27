@@ -11,7 +11,7 @@ body{
 }
 
 header{
-	background:#03A9F4;#35434a;
+	background:#03A9F4;
 	border-bottom:#448AFF 3px solid;
 	height:120px;
 	width:100%;
@@ -26,7 +26,7 @@ header{
 			width:100%;
 			margin:0px;
 		}
-#brandname{
+#info{
 	float:left;
 	font-size:30px;
 	color: #fff;
@@ -39,7 +39,15 @@ header h2{
 
 }
 
+#navigation
+{
+    float: right;
+}
 
+#flex
+{
+    display: flex;
+}
 
 .btn-info {background-color: #2196F3;
 	height:40px;
@@ -47,10 +55,14 @@ header h2{
 .btn-info:hover {background: #0b7dda;}
 
 
-.resultss{
+.results{
 	border-radius: 15px 50px;
-    background: #345fe4;
+    background: #03A9F4;
     padding: 20px; 
-    width: 200px;
-    height: 150px;
+    width: 300px;
+    height: 180px;
+}
+
+.container div {
+    display: inline-block;
 }

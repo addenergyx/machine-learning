@@ -3,26 +3,51 @@
 <head>
 	<title></title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+    <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
+
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+    <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
 </head>
 <body>
 
 	<header>
 		<div class="container">
-		<div id="brandname">
+		<div id="info">
 		</div>
 		<h2>Insertion/Deletion Prediction for Sequence Data</h2>
 		
 	</div>
 	</header>
-	<p style="color:blue;font-size:20;text-align: center;"><b>Results for sequence</b></p>
-	<div class="results">
-    <p>Prediction: </p>
-    <p>Most Likely: {{ prediction }}</p>
-    <p>Second: {{ p2 }}</p>
-    <p>Third: {{ p3 }}</p>
-    <p>Forth: {{ p4 }}</p>
-    <p>Fifth: {{ p5 }}</p>
-	</div>
+    <div>
+        <p style="color:blue;font-size:20;text-align: center;"><b>Results for sequence prediction</b></p>
+        <a style="float:right" href="/">[Home]</a>
+    </div>
+	
 
+    <div id="flex">
+        <div class="results">
+            <table border="1">
+                <tr>
+                    <th>Insertion/Deletion<th>
+                    <th>Percent Likelihood<th>
+                </tr>
+                
+                {% for key, value in posts.items() %}
+                <tr>    
+                    <td colspan="2">{{key}}</td>
+                    <td colspan="2">{{value}}%</td>
+                </tr>
+                {% endfor %}
+                
+            </table>
+        </div>
+
+        <div id="navigation">
+        {{ script|safe }}
+        {{ div|safe }}
+        </div>
+    </div>
+    
 </body>
 </html>

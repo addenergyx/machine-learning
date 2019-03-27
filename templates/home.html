@@ -21,7 +21,7 @@
 
 	<header>
 		<div class="container">
-		<div id="brandname">
+		<div id="info">
 		</div>
 		<h2>Insertion/Deletion Prediction for Sequence Data</h2>
 
@@ -33,7 +33,6 @@
         
 		<form action="{{ url_for('predict')}}" method="POST">
 		<p>Paste or type your <b>sequence</b> here: <a id="clear" href="#" onclick="eraseText();">[clear]</a></p>
-		<!-- <input type="text" name="comment"/> -->
 		<textarea name="comment" id="comment" rows="1" cols="52" maxlength="52"></textarea>
 		<br/>
 
@@ -45,6 +44,5 @@
 
 	
 	
-
 </body>
 </html>
