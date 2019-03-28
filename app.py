@@ -4,20 +4,20 @@
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
-from flask import Flask, render_template, request #WebApp Framework
+from flask import Flask, render_template, request, redirect, url_for, flash #WebApp Framework
 from bokeh.plotting import figure
 from bokeh.embed import components #Used to embed plots in webapp
 import pickle #Used to get stored python objects from the trained classification model
-
 #By doing this don't need to train the model in the webapp.
 
 #Initialises flask application
 app = Flask(__name__)
+app.secret_key = 'secret'
 
 #Home page
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
-	return render_template('home.html')
+    return render_template('home.html')
 
 #loads model
 def get_model():
@@ -65,6 +65,11 @@ vfunc = np.vectorize(map_func)
 print(" * Loading Keras model...")
 get_model()
 
+# Checks user input for valid dna sequence
+def is_valid_DNA(dna):
+    if len(set(dna.upper()) - {'A','C','G','T'}) != 0 or len(dna) != 52: return False
+    return True
+
 # Create main plot
 def create_figure(pred_percentage):
     # create a new plot with a title and axis labels
@@ -81,9 +86,18 @@ def create_figure(pred_percentage):
 #Reults page
 @app.route("/predict", methods=['POST']) 
 def predict():
-    
     if request.method == 'POST':
+        
+        #x = 'AGTCGCGGATGjCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT'
+
         userData = request.form['comment']
+        
+        if is_valid_DNA(userData) is False:
+            # Flash is a simple way to send a message from one request to the next
+            flash("Invalid Sequence! Ensure sequence is 52 bases long and includes only 'A' 'T' 'C' & 'G' ")
+            return redirect(url_for('home'))
+
+
         x = encodeData(userData)
         
         # Gets classification of indel from output dictionary of the trained model

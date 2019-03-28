@@ -35,7 +35,13 @@
 		<p>Paste or type your <b>sequence</b> here: <a id="clear" href="#" onclick="eraseText();">[clear]</a></p>
 		<textarea name="comment" id="comment" rows="1" cols="52" maxlength="52"></textarea>
 		<br/>
-
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p> <b>Error:</b> {{message}}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 		<input type="submit" class="btn-info" value="Predict">
 		
 	</form>
