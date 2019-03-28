@@ -12,26 +12,24 @@ cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: /home/ubu/data/machine-learning-data/merged_data/classification_52bp_miseq26_merged_data.csv
-#sample: ~/data-preprocessing-worktree/data/merged_data/miseq_classification_data.csv
-#sample: ~/machine-learning/test.csv
-#sample: /home/ubu/data/machine-learning-data/encoded_input.csv
+#sample: /home/ubu/data/machine-learning-data/merged_data/classification_52bp_miseq26_merged_data.csv
+sample: /home/ubu/data/machine-learning-data/encoded_input.csv
 
 # File containing encoded output. Must be supplied when using batch flag. Input file goes with --sample
-#output: /home/ubu/data/machine-learning-data/encoded_output.csv
+output: /home/ubu/data/machine-learning-data/encoded_output.csv
 
 # Batch mode
 # Use batch mode when data is too big to fit into memory, point --sample to encoded input file and --output to encoded output file
 # Can encode data using encode_data.py
 # DO NOT USE --predict when using batch mode. Save the trained model then can run prediction on the saved model. 
-#batch: 1 
+batch: 1 
 
 # Path to save model (Default: ~/machine-learning/snapshots/classification/{date}_trained_model.h5)
-#save: /home/ubu/data/machine-learning-data/machine-learning/snapshots/classification/flask_classification_trained_model.h5
+save: /home/ubu/data/machine-learning-data/machine-learning/snapshots/classification/full_classification_trained_model.h5
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence
-predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
+#predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA,GG,GA
 
 # Load an existing model 
 # Default: /home/ubuntu/machine-learning/snapshots/03-05-18_best_model.h5
@@ -40,5 +38,3 @@ predict: TG,AG,AA,AA,CC,AA,AC,AG,GG,TG,TG,GC,AG,AA,GC,AG,CA,GG,AA,AG,AC,AA,AA,GA
 # Path of dir to save tensorboard of new model 
 # When the model finishes program will automatically open tensorboard in the browser
 #tensorboard: /home/ubuntu/machine-learning/tensorboard/classification/13-06-18_classification_tensorboard
-
-

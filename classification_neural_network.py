@@ -23,7 +23,7 @@ from keras.models import load_model
 from turicreate import SFrame #Currently no python3.7 support
 import gc
 import csv
-#import pickle #Module for saving Objects by serialization
+import pickle #Module for saving Objects by serialization
 
 '''
 Put modules at the top instead of within functions as the latter will make 
@@ -516,7 +516,7 @@ if user_observation is not None:
     # output to static HTML file
     output_file('classification.html')
     # create a new plot with a title and axis labels
-    plot = figure(title="Chance of given in/del occuring", x_axis_label='x', y_axis_label='y')
+    plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelihood')
     # add a line renderer with legend and line thickness
     plot.line(mylist, np.ravel(pred_percentage), legend="Percentage", line_width=2)
     # show the results
@@ -539,9 +539,12 @@ if path_to_tensorboard:
 
 #pickle used to save classification of data - movce to flask_train.py later
 #file saved in same location as script running it
-#pickle_out = open("dict.pickle","wb")
-#pickle.dump(output_dict, pickle_out)
-#pickle_out.close()
-#pickle_out = open("headers.pickle","wb")
-#pickle.dump(headers, pickle_out)
-#pickle_out.close()
+pickle_out = open("dict.pickle","wb")
+pickle.dump(output_dict, pickle_out)
+pickle_out.close()
+pickle_out = open("headers.pickle","wb")
+pickle.dump(headers, pickle_out)
+pickle_out.close()
+pickle_out = open("outcomes.pickle","wb")
+pickle.dump(mylist, pickle_out)
+pickle_out.close()
