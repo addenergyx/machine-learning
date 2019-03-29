@@ -22,7 +22,7 @@ def home():
 #loads model
 def get_model():
     global model, graph
-    model = load_model('/home/ubu/flask_apps/data/flask_classification_trained_model.h5')
+    model = load_model('data/flask_classification_trained_model.h5')
     #Flask uses multiple threads. As a result the tensorflow model can not be loaded and 
     #used in the same thread. One workaround is to force tensorflow to use the gloabl default graph .
     #https://stackoverflow.com/questions/51127344/tensor-is-not-an-element-of-this-graph-deploying-keras-model
