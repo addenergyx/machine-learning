@@ -73,7 +73,7 @@ def is_valid_DNA(dna):
 # Create main plot
 def create_figure(pred_percentage):
     # create a new plot with a title and axis labels
-    plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelyhood')
+    plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelihood')
     
     #Gets all possible outcomes from trained model
     pickle_in = open("data/outcomes.pickle","rb")

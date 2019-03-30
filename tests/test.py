@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
  
 import unittest
-import re
-import flask
+from app import app # Gets flask application
 
-# Gets flask application
-from app import app 
+# Must run tests from same directory as app.py
  
 class BasicTests(unittest.TestCase):
      
@@ -18,7 +16,7 @@ class BasicTests(unittest.TestCase):
         self.app = app.test_client(self) # Creates test instance
 
     def tearDown(self):
-        print("==> Tearing down after tests")
+        print("==> Tearing down test env")
     
     # Ensure that Flask was set up correctly
     def test_index(self):
@@ -42,27 +40,14 @@ class BasicTests(unittest.TestCase):
     
     # Ensure Error message appears when enter invalid sequence
     def test_flash(self):
-        response = self.app.post('/predict', data=dict(comment="AGTCGCsdfGGATGCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT"), follow_redirects=True)
+        response = self.app.post('/predict', data=dict(comment="sadfrweasfasdfa3erw"), follow_redirects=True)
         self.assertIn(b'Error', response.data)
 
     
 if __name__ == "__main__":
     unittest.main()
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+ 
     
     
     

@@ -1,7 +1,16 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-	<title></title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Results</title>
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/fonts/font-awesome.min.css">
+    <link rel="stylesheet" href="static/fonts/ionicons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.1.1/aos.css">
+    <link rel="stylesheet" href="https://unpkg.com/@bootstrapstudio/bootstrap-better-nav/dist/bootstrap-better-nav.min.css">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
     <link href="//cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
     <link href="//cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">
@@ -9,45 +18,71 @@
     <script src="//cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
     <script src="//cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>
 </head>
+
 <body>
-
-	<header>
-		<div class="container">
-		<div id="info">
-		</div>
-		<h2>Insertion/Deletion Prediction for Sequence Data</h2>
-		
-	</div>
-	</header>
-    <div>
-        <p style="color:blue;font-size:20;text-align: center;"><b>Results for sequence prediction</b></p>
-        <a style="float:right" href="/">[Back]</a>
-    </div>
-	
-
-    <div id="flex">
-        <div class="results">
-            <table border="1">
-                <tr>
-                    <th>Insertion/Deletion<th>
-                    <th>Percent Likelihood<th>
-                </tr>
-                
-                {% for key, value in posts.items() %}
-                <tr>    
-                    <td colspan="2">{{key}}</td>
-                    <td colspan="2">{{value}}%</td>
-                </tr>
-                {% endfor %}
-                
-            </table>
+    <section class="d-flex flex-column justify-content-start" data-aos="fade-up" data-aos-duration="700" data-aos-once="true" id="hero-2" style="width: 100%;height: 100vh;background-image: url(&quot;static/img/MSR-AI_Brain-Hero_sm.jpg&quot;);background-position: center;background-size: cover;background-repeat: no-repeat;">
+        <div id="results">
+            <nav class="navbar navbar-light navbar-expand-md">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/" style="background-image: url(&quot;static/img/logo-front-wgc.png&quot;);"></a>
+                    <button class="navbar-toggler" data-toggle="collapse" data-target="#navcol-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navcol-1">
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="/#prediction-area" style="color: rgba(248,245,245,0.9);">Predict</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="/#video-and-info" style="color: rgba(247,242,242,0.9);">About</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" href="https://github.com/addenergyx/machine-learning" style="color: rgba(249,246,246,0.9);">Github</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" style="color: rgba(249,249,249,0.9);"><i class="fa fa-linkedin-square border-light"></i></a></li>
+                        </ul>
+                </div>
         </div>
-
-        <div id="navigation">
-        {{ script|safe }}
-        {{ div|safe }}
+        </nav>
+        <h1 class="text-center" id="predict-title" style="color: rgb(246,247,249);padding-top: 20px;">Insertion/Deletion Prediction for Sequence Data<br></h1>
         </div>
-    </div>
+        <div style="padding: 20px;">
+            <div class="container" style="color: rgb(246,247,248);font-size: 20;">
+                <div class="row" style="width: 100%;">
+                    <div class="col"></div>
+                    <div class="col text-center">
+                        <p><strong>Results for sequence prediction</strong><br></p>
+                    </div>
+                    <div class="col text-right"><a class="text-right" href="/#predictions">[Back]</a></div>
+                </div>
+            </div>
+        </div>
+        <div style="padding-top: 20px;" id="flex">
+            <div class="results">
+                <table id="stats">
+                    <tr>
+                        <th>Insertion/Deletion<th>
+                        <th>Percent Likelihood<th>
+                    </tr>
+
+                    {% for key, value in posts.items() %}
+                    <tr>    
+                        <td colspan="2">{{key}}</td>
+                        <td colspan="2">{{value}}%</td>
+                    </tr>
+                    {% endfor %}
+
+                </table>
+            </div>
+        
+        
+            <div id="navigation" class="center" style="padding-left: 20px">
+                {{ script|safe }}
+                {{ div|safe }}
+            </div>
+        </div>
+    </section>
     
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/@bootstrapstudio/bootstrap-better-nav/dist/bootstrap-better-nav.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.1.1/aos.js"></script>
+    <script src="static/js/bs-animation.js"></script>
 </body>
+
 </html>
