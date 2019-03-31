@@ -84,3 +84,8 @@ th, td {
 
 tr:hover {background-color: #003366; color:white}
 
+#video-and-info img {
+  text-align: center;
+  padding-bottom: 20px;
+}
+

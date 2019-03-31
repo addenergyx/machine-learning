@@ -103,16 +103,15 @@
             </div>
         </div>
     </section>
-    <section data-aos="fade-up" data-aos-duration="700" id="video-and-info" style="width: 100%;height: 100vh;"><iframe width="560" height="315" allowfullscreen="" frameborder="0" src="https://www.youtube.com/embed/4YKFw2KZA5o?loop=1&amp;playlist=4YKFw2KZA5o&amp;controls=0&amp;showinfo=0&amp;rel=0" style="padding-top: 20px;"></iframe>
+    <section data-aos="fade-up" data-aos-duration="700" id="video-and-info" style="width: 100%;min-height: 100vh;"><iframe width="560" height="315" allowfullscreen="" frameborder="0" src="https://www.youtube.com/embed/4YKFw2KZA5o?loop=1&amp;playlist=4YKFw2KZA5o&amp;controls=0&amp;showinfo=0&amp;rel=0" style="padding-top: 20px;"></iframe>
         <div>
+            <br>
             <div class="container">
-                <div class="row" style="padding-top: 120px;">
-                    <div class="col"><img src="static/img/tools.png" style="width: 500px;"></div>
-                    <div class="col">
+                <div class="row" style="padding-top: 50px;">
+                    <div class="col-md-6"><img src="static/img/tools.png" style="width: 100%;"></div>
+                    <div class="col-md-6">
                         <p style="width: 500;color: rgb(8,125,242);font-size: 24px;"><strong>ML-Powered CRISPR Analysis</strong></p>
-                        <p class="text-justify" style="width: 500;">The year 2001 saw the first rendition of the Human Genome Project. The project induced a great sense of optimism for many researchers, as genomic medicine was considered a pivotal cornerstone for medical diagnosis and treatment.
-                            The need for a cost-efficient means of analysing the large amount of genomic data in a meaningful way has been requested for a long time.&nbsp;Genomic medicine and ML have been the core of many publications by Nvidia and IBM.
-                            With these tools this WebApp has been created to aid researchers in &nbsp;predicting cut site sizes from a given sequence.<br><br><br><br></p>
+                        <p class="text-justify" style="width: 100%;">The year 2001 saw the first rendition of the Human Genome Project with the first human genome sequence being fully sequenced in 2003. The project induced a great sense of optimism for many researchers, as genomic medicine was considered a pivotal cornerstone for medical diagnosis and treatment. The need for a cost-efficient means of analysing the large amount of genomic data in a meaningful way has been requested for a long time.&nbsp;Genomic medicine and ML have been the core of many publications by Nvidia and IBM. With these tools this WebApp has been created to aid researchers in &nbsp;predicting cut site sizes from a given sequence.</p>
                     </div>
                 </div>
             </div>
@@ -120,7 +119,7 @@
     </section>
     <section data-aos="fade-up" data-aos-duration="700" id="predictions" style="width: 100%;height: 100vh;">
         <div class="container">
-            <h1 id="prediction-area"><br>Insertion/Deletion Prediction for Sequence Data<br><br></h1>
+            <h1 id="prediction-area"><br>Insertion/Deletion Prediction for Sequence Data</h1>
             <div>
                 <p> This webapp will predict insertion/deletion spread of single strand DNA sequences using data provided by the Wellcome Sanger Institute. Currently limited to a 52 base sequence containing the <b>CRISPR</b> from bases 29 to 48 and the <b>PAM</b> from bases 49 to 51. Simply type or paste your sequence below and click Predict. You can test the server using <a id="sample" title="Click to paste sample" href="#predictions" onclick="printIt();">this sample sequence.</a></p>
             </div>

@@ -1,0 +1,10 @@
+name: webapp #Environment name
+dependencies:
+  - python=3.6
+  - pip:
+    - flask
+    - tensorflow
+    - keras
+    - bokeh
+    - numpy 
+    - gunicorn # for app deployment
