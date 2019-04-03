@@ -59,7 +59,7 @@
             // Add hash (#) to URL when done scrolling (default click behavior)
             window.location.hash = hash;
           });
-        } // End if
+        }
       });
     });
     </script>
@@ -80,8 +80,8 @@
                         <ul class="nav navbar-nav">
                             <li class="nav-item" role="presentation"><a class="nav-link active" href="#predictions">Predict</a></li>
                             <li class="nav-item" role="presentation"><a class="nav-link active" href="#video-and-info">About</a></li>
-                            <li class="nav-item" role="presentation"><a class="nav-link" href="https://github.com/addenergyx/machine-learning" style="color: rgba(0,0,0,0.9);">Github</a></li>
-                            <li class="nav-item" role="presentation"><a class="nav-link" href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" style="color: rgba(0,0,0,0.9);"><i class="fa fa-linkedin-square"></i></a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" target="_blank" href="https://github.com/addenergyx/machine-learning" style="color: rgba(0,0,0,0.9);">Github</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" target="_blank" href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" style="color: rgba(0,0,0,0.9);"><i class="fa fa-linkedin-square"></i></a></li>
                         </ul>
                     </div>
                 </div>
@@ -125,7 +125,7 @@
             </div>
             <form action="{{ url_for('predict')}}" method="post">
                 <p>Paste or type your <b>sequence</b> here: <a id="clear" href="#predictions" onclick="eraseText()">[clear]</a></p>
-                <textarea class="form-control" rows="1" cols="52" name="comment" maxlength="52" id="comment" style="width: 60%;"></textarea>
+                <textarea class="form-control" rows="1" cols="52" name="comment" maxlength="52" id="comment" ></textarea>
             <br/>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -137,6 +137,15 @@
             <input type="submit" class="btn-info" value="Predict"></form>
         </div>
     </section>
+    <div class="footer-basic" style="background-color: #333333;">
+        <footer>
+            <div class="social">
+                <a href="https://github.com/addenergyx/machine-learning" target="_blank" style="background-color: #333333;"><i class="icon ion-social-github" style="color: #ffffff;"></i></a>
+                <a href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" target="_blank" style="background-color: #333333;"><i class="icon ion-social-linkedin" style="color: #ffffff;"></i></a></div>
+            <p class="copyright">2019 DAVID ADENIJ,&nbsp;<a href="mailto: ada121@student.anglia.ac.uk" style="color: #aaaaaa;"><span style="text-decoration: underline;">ADA121@STUDENT.ANGLIA.AC.UK</span><br></a></p>
+            <p class="copyright">SUPERVISOR: CRISTINA LUCA</p>
+        </footer>
+    </div>
     
     <script src="static/js/jquery.min.js"></script>
     <script src="static/bootstrap/js/bootstrap.min.js"></script>
