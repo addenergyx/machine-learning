@@ -10,4 +10,5 @@ install:
   - pip install -r webapp/requirements.txt
 
 script: 
-  - webapp/tests/test.py
+  - cd webapp
+  - python -m unittest discover
