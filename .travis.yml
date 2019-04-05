@@ -13,9 +13,6 @@ script:
   - cd webapp
   - python -m unittest discover
 
-before_deploy:
-  - cd webapp
-
 deploy:
   provider: heroku
   api_key:
