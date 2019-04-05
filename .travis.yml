@@ -8,3 +8,5 @@ before_install:
 
 install: 
   - pip install -r webapp/requirements.txt
+
+script: nosetests
