@@ -13,6 +13,8 @@ This project uses machine learning to predict insertion/deletion spread of a giv
 
 Screenshots:
 
+![ml-webapp](https://user-images.githubusercontent.com/22744727/55635730-5483c980-57b9-11e9-83bf-98dff6719d80.jpg)
+
 ![ml-webapp-prediction](https://user-images.githubusercontent.com/22744727/55635819-85fc9500-57b9-11e9-899a-7a5fd4cae6fe.jpg)
 
 ## Installation
