@@ -4,46 +4,46 @@
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
-from flask import Flask, render_template, request, redirect, url_for, flash #WebApp Framework
+from flask import Flask, render_template, request, redirect, url_for, flash # WebApp Framework
 from bokeh.plotting import figure
-from bokeh.embed import components #Used to embed plots in webapp
-import pickle #Used to get stored python objects from the trained classification model
-#By doing this don't need to train the model in the webapp.
+from bokeh.models import HoverTool
+from bokeh.embed import components # Used to embed plots in webapp
+import pickle # Used to get stored python objects from the trained classification model
+# By doing this don't need to train the model in the webapp.
 
-#Initialises flask application
+# Initialises flask application
 app = Flask(__name__)
 app.secret_key = 'secret'
 
-#Home page
+# Home page
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('home.html')
 
-#loads model
+# Loads model
 def get_model():
     global model, graph
     model = load_model('data/flask_classification_trained_model.h5')
-    #Flask uses multiple threads. As a result the tensorflow model can not be loaded and 
-    #used in the same thread. One workaround is to force tensorflow to use the gloabl default graph .
-    #https://stackoverflow.com/questions/51127344/tensor-is-not-an-element-of-this-graph-deploying-keras-model
+    # Flask uses multiple threads. As a result the tensorflow model can not be loaded and 
+    # used in the same thread. One workaround is to force tensorflow to use the gloabl default graph .
     graph = tf.get_default_graph() 
     print(" * Model loaded!")
 
 def encodeData(userData):
         
-    #https://stackoverflow.com/questions/9475241/split-string-every-nth-character
+    # https://stackoverflow.com/questions/9475241/split-string-every-nth-character
     pairing = 2
     userData = userData.upper()
     userData = [userData[i:i+pairing] for i in range(0, len(userData), pairing)]
         
-    #User data needs to be encoded in the same way as the training data
-    #cross ref sequence with headers list
+    # User data needs to be encoded in the same way as the training data
+    # Cross reference sequence with headers list
         
-    #Gets basepairs from original dataset to cross reference
+    # Gets basepairs from original dataset to cross reference
     pickle_in = open("data/headers.pickle","rb")
     headers = pickle.load(pickle_in)
     
-    #encodes user input to match encoding of training data
+    # Encodes user input to match encoding of training data
     x = []
     for i in range(26):
         for j in headers:
@@ -61,7 +61,7 @@ def map_func(val, dictionary):
 
 vfunc = np.vectorize(map_func)
 
-##loading model into memory
+# Loading model into memory
 print(" * Loading Keras model...")
 get_model()
 
@@ -72,23 +72,34 @@ def is_valid_DNA(dna):
 
 # Create main plot
 def create_figure(pred_percentage):
-    # create a new plot with a title and axis labels
+    # Create a new plot with a title and axis labels
     plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelihood')
     
-    #Gets all possible outcomes from trained model
+    # Gets all possible outcomes from trained model
     pickle_in = open("data/outcomes.pickle","rb")
     mylist = pickle.load(pickle_in)
     
-    # add a line renderer with legend and line thickness
-    plot.line(mylist, np.ravel(pred_percentage), legend="Percentage", line_width=2)
+    # Add a line renderer with legend and bar thickness
+    plot.vbar(mylist, top=np.ravel(pred_percentage), legend="Percentage", width=0.9)
+    
+    # Hover tool
+    plot.add_tools(HoverTool(tooltips=[("LOCATION", "@x"), ("PREDICTION", "@top%")]))
+
+#    plot.xaxis.visible = False
+#    plot.yaxis.visible = False 
+#    plot.xgrid.visible = False
+#    plot.ygrid.visible = False
+#    plot.background_fill_color = None
+#    plot.border_fill_color = None
+    
     return plot
 
-#Reults page
+# Reults page
 @app.route("/predict", methods=['POST']) 
 def predict():
     if request.method == 'POST':
         
-        #x = 'AGTCGCGGATGjCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT'
+        # x = 'AGTCGCGGATGjCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT'
 
         userData = request.form['comment']
         
