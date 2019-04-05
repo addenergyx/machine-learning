@@ -4,6 +4,15 @@
 
 This project uses machine learning to predict insertion/deletion spread of a given sequence from data provided by the Wellcome Sanger Institute. The deployed web application can be viewed [here.](https://indel-app.herokuapp.com/)
 
+## Table of Contents
+
+ 1. [Running Webapp Locally](#running-webapp-locally)
+ 2. [Installation](#installation)
+ 3. [Deployment](#deployment)
+ 4. [Running Keras Models Locally](#running-keras-models-locally)
+ 5. [Built with](#built-with)
+ 6. [Description of files](#description-of-files)
+
 ## Running Webapp Locally
 * Clone this repo
 * Install requirements
