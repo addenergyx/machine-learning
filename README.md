@@ -83,3 +83,36 @@ _If you are using a large dataset that cannot be encoded into memory, firstly en
 ```shell
 python ~/machine-learning/classification_neural_network.py
 ```
+## Built with
+* [Keras](https://keras.io/) - The main machine learning framework used. High level API for Neural Networks using Tensorflow in the backend.
+* [Bootstrap](https://getbootstrap.com/) - Free front-end framework for faster and easier web development.
+* [Scikit-learn](https://scikit-learn.org/stable/) - Used for data encoding and cross validation.
+* [Heroku](https://www.heroku.com/) - Cloud platform used to deploy the model.
+
+## Description of files
+Python scripts files:
+|**Filename**| **Description** |
+|--|--|
+|classification_neural_network.py|Classification approach to use case, model used in the WebApp.|
+|neural_network.py|Regression approach to use case.|
+|.cn_config.yml|Configuration file for the classification model.|
+|encode_data.py|Parse large dataset and produce encoded binary data for the classification model|
+
+Webapp files:
+|**Filename**| **Description** |
+|--|--|
+|requirements.txt|All dependencies to run webapp on heroku.|
+|app.py|Flask application.|
+|Procfile|Specifies the commands that are executed by the app on startup.|
+|tests/test.py|Unit testing on web application|
+|templates/home.html|Web app home page|
+|templates/results.html|Web app results page|
+
+Other files:
+|**Filename**| **Description** |
+|--|--|
+|README.md|Markdown file description of the project.  |
+|data_preprocessing.pl|Feature extraction from miseq data|
+|classification_data_preprocessing.pl|Feature extraction from miseq data|
+|merge_csv.pl|Merges several data files into one|
+|static/css/styles.css|Styling for webapp|
