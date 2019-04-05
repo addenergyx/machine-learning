@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Home</title>
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/fonts/font-awesome.min.css">
+    <link rel="stylesheet" href="static/fonts/ionicons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.1.1/aos.css">
+    <link rel="stylesheet" href="https://unpkg.com/@bootstrapstudio/bootstrap-better-nav/dist/bootstrap-better-nav.min.css">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>    
+    <script type="text/javascript">
+    function printIt(){
+        document.getElementById('comment').value="AGTCGCGGATGCGGATGATCGATCGATCGATTAGTTTCGATCGAGGCTAGAT"
+    }
+    </script>
+    <script type = "text/javascript">
+    function eraseText() {
+        document.getElementById("comment").value = "";
+    }
+    </script>
+    
+    <!-- $( document ).ready() is considerable faster then window.onload -->
+    <script>
+    $( document ).ready(function() {
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                window.location.href = "#predictions";
+            {% endif %}
+        {% endwith %}
+    });
+    </script>
+    
+    <!-- Smooth scroll for all links https://www.w3schools.com/howto/howto_css_smooth_scroll.asp#section1 -->
+    <script>
+    $(document).ready(function(){
+      // Add smooth scrolling to all links
+      $("a").on('click', function(event) {
+
+        // Make sure this.hash has a value before overriding default behavior
+        if (this.hash !== "") {
+          // Prevent default anchor click behavior
+          event.preventDefault();
+
+          // Store hash
+          var hash = this.hash;
+
+          // Using jQuery's animate() method to add smooth page scroll
+          // The optional number (800) specifies the number of milliseconds it takes to scroll to the specified area
+          $('html, body').animate({
+            scrollTop: $(hash).offset().top
+          }, 800, function(){
+
+            // Add hash (#) to URL when done scrolling (default click behavior)
+            window.location.hash = hash;
+          });
+        }
+      });
+    });
+    </script>
+    
+</head>
+
+<body>
+    <section class="d-flex flex-column justify-content-between" id="hero">
+        <div id="hero-top">
+            <nav class="navbar navbar-light navbar-expand-md fixed-top">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#hero"></a>
+                    <button class="navbar-toggler" data-toggle="collapse" data-target="#navcol-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse"id="navcol-1">
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="#predictions">Predict</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="#video-and-info">About</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" target="_blank" href="https://github.com/addenergyx/machine-learning" style="color: rgba(0,0,0,0.9);">Github</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" target="_blank" href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" style="color: rgba(0,0,0,0.9);"><i class="fa fa-linkedin-square"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <h1 class="text-center" data-aos="fade-up" data-aos-duration="700" data-aos-once="true" id="title">Using Machine Learning and Genome sequences to improve&nbsp;</h1>
+            <h2 class="text-center" data-aos="fade-up" data-aos-duration="700" data-aos-once="true" id="subtitle">Human Health</h2>
+        </div>
+        <div id="hero-bottom">
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-link btn-block bounce animated infinite arrow-button" type="button">
+                            <a class="stretched-link" href="#video-and-info">
+                                <i class="icon ion-ios-arrow-down" style="color: rgb(0,3,6);"></i>
+                            </a>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section data-aos="fade-up" data-aos-duration="700" id="video-and-info" style="width: 100%;min-height: 100vh;"><iframe width="560" height="315" allowfullscreen="" frameborder="0" src="https://www.youtube.com/embed/4YKFw2KZA5o?loop=1&amp;playlist=4YKFw2KZA5o&amp;controls=0&amp;showinfo=0&amp;rel=0" style="padding-top: 20px;"></iframe>
+        <div>
+            <br>
+            <div class="container">
+                <div class="row" style="padding-top: 50px;">
+                    <div class="col-md-6"><img src="static/img/tools.png" style="width: 100%;"></div>
+                    <div class="col-md-6">
+                        <p style="width: 500;color: rgb(8,125,242);font-size: 24px;"><strong>ML-Powered CRISPR Analysis</strong></p>
+                        <p class="text-justify" style="width: 100%;">The year 2001 saw the first rendition of the Human Genome Project with the first human genome sequence being fully sequenced in 2003. The project induced a great sense of optimism for many researchers, as genomic medicine was considered a pivotal cornerstone for medical diagnosis and treatment. The need for a cost-efficient means of analysing the large amount of genomic data in a meaningful way has been requested for a long time.&nbsp;Genomic medicine and ML have been the core of many publications by Nvidia and IBM. With these tools this WebApp has been created to aid researchers in &nbsp;predicting cut site sizes from a given sequence.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section data-aos="fade-up" data-aos-duration="700" id="predictions" style="width: 100%;height: 100vh;">
+        <div class="container">
+            <h1 id="prediction-area"><br>Insertion/Deletion Prediction for Sequence Data</h1>
+            <div>
+                <p> This webapp will predict insertion/deletion spread of single strand DNA sequences using data provided by the Wellcome Sanger Institute. Currently limited to a 52 base sequence containing the <b>CRISPR</b> from bases 29 to 48 and the <b>PAM</b> from bases 49 to 51. Simply type or paste your sequence below and click Predict. You can test the server using <a id="sample" title="Click to paste sample" href="#predictions" onclick="printIt();">this sample sequence.</a></p>
+            </div>
+            <form action="{{ url_for('predict')}}" method="post">
+                <p>Paste or type your <b>sequence</b> here: <a id="clear" href="#predictions" onclick="eraseText()">[clear]</a></p>
+                <textarea class="form-control" rows="1" cols="52" name="comment" maxlength="52" id="comment" ></textarea>
+            <br/>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p> <b>Error:</b> {{message}}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+            <input type="submit" class="btn-info" value="Predict"></form>
+        </div>
+    </section>
+    <div class="footer-basic" style="background-color: #333333;">
+        <footer>
+            <div class="social">
+                <a href="https://github.com/addenergyx/machine-learning" target="_blank" style="background-color: #333333;"><i class="icon ion-social-github" style="color: #ffffff;"></i></a>
+                <a href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" target="_blank" style="background-color: #333333;"><i class="icon ion-social-linkedin" style="color: #ffffff;"></i></a></div>
+            <p class="copyright">2019 DAVID ADENIJ,&nbsp;<a href="mailto: ada121@student.anglia.ac.uk" style="color: #aaaaaa;"><span style="text-decoration: underline;">ADA121@STUDENT.ANGLIA.AC.UK</span><br></a></p>
+            <p class="copyright">SUPERVISOR: CRISTINA LUCA</p>
+        </footer>
+    </div>
+    
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/bootstrap/js/bootstrap.min.js"></script>
+    <script src="static/js/bs-animation.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.1.1/aos.js"></script>
+    <script src="https://unpkg.com/@bootstrapstudio/bootstrap-better-nav/dist/bootstrap-better-nav.min.js"></script>
+
+</body>
+
+</html>
