@@ -40,6 +40,20 @@ The model was deployed to production using **Heroku**.
 ## Running Keras Models Locally
 ### **Need miseq data to run the models locally!!!**
 
+### Data pre-processing script dependencies
+```shell
+$ sudo apt-get install make
+$ sudo cpan App::cpanminus 
+$ sudo cpanm Text::CSV::Slurp Try::Tiny Log::Log4perl Parallel::ForkManager Text::CSV::Separator Text::CSV_XS Getopt::Long
+```
+
+Vinna rna install
+```shell
+$ sudo apt-add-repository ppa:j-4/vienna-rna
+$ sudo apt-get update
+$ sudo apt-get install vienna-rna
+```
+
 **Advise using anaconda distribution because it comes with spyder and jupyter notebook and allows easy configuration of different environments. Jupyter notebok only used for visualization of data in a browser.**
 
 ### Clone repo
