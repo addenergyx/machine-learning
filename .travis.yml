@@ -14,3 +14,4 @@ deploy:
   provider: heroku
   api_key:
     secure: 7da7b609-cf72-4e49-b12d-e13ed50189b7
+app: indel-app
