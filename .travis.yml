@@ -11,8 +11,8 @@ script:
 - python -m unittest discover
 deploy:
   skip_cleanup: true
-  script: env PROJECT_PATH=webapp
   provider: heroku
+  PROJECT_PATH=$PROJECT_PATH
   api_key:
     secure: 7da7b609-cf72-4e49-b12d-e13ed50189b7
   app: indel-app
