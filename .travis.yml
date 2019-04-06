@@ -13,5 +13,5 @@ deploy:
   skip_cleanup: true
   provider: heroku
   api_key:
-    secure: uwNtP5JjfWvytlKDycQobxIzkvuApDOTBrXrTsvDpwY8YzjPdibw+/CdSntwV8XxNCCihetURZyg9bSM2GLBG+DWupGGOO7ri9G/Zi4kNmauI7c8ZRpBWhdfWlWNUxT2Tw9+RKtEGdo8mfx+pY+5wzwu2PnWUbAbmczv3e4pcgatwIcmStt9D9G/+9UliQktRSVkO5pAbURnxYnKxnNzKux43GZuWAolrqbi+oF55cm6CSE+LqCtYqAbyrFKVKSwJUL+Gx3JnFEpTA978azcqBDPu+Yzb2Jwyslc7+wLg+us0J1zQ56v7sdPXSVhSrOffLAcYuovkB7hCt+sWOousBDj/4RXWQws2cgNdBxyqdeJg9P6aFe4vnKrCBQV485Xs/Oq67UjwcoRu9LTT8Gvk3LGHlnUo4mp/LmlVqfaQ6hFu6KktdS+GgwmtYl7SSzqRtOwmNGfwze3nx2RNeZ438LZgEzx4vQV5L/VICpvKXf1dYc2GwMdh51Da+TwV2kkOcfNe//mgzTVQrJK3i73n+VCPgTlqMmJksQPCjJAMzfvMc5ZEAj3De9pxBar/5FJJ6ZO/6Rlh+z+yD2c+5vHgZCPaesqoiSFGlxruaI9yEIDM7GL3U5e2HSt+UJuHZQPdlKYycscUFeVz1dFzCZjsYkkPZA/7+0Gqn8zYWh2UD4=
+    secure: $HEROKU_API
   app: indel-app
