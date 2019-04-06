@@ -1,8 +1,6 @@
 language: python
 python:
 - '3.6'
-env:
-  PROJECT_PATH=webapp
 before_install:
 - sudo apt-get update
 - sudo apt-get install -y libxml2-dev
@@ -15,5 +13,5 @@ deploy:
   skip_cleanup: true
   provider: heroku
   api_key:
-    secure: 7da7b609-cf72-4e49-b12d-e13ed50189b7
+    secure: Cj3d5Q/Dg1qOWKgOZI88i3d9Ku9DbozinUSEsd3+pjf8emN3NjpXYNYGpGmRRvPRP/eVYzJHnVol+WBxn0eRlJx9rq8LiaR2aNz6wZBZpDgM/4bJOJ9vqMIDInJxC1h+pzxt/KfIKKohCt9PMH2Nt/w0lDwoi6DBaXyefMboe3+ZQ4DIYKINIE3VWFWIVMhRpH8DvI1cnDyMe0MujwyLKNmGwCHX9As0NarFFyXd/g3Fjc7nZEgF2NYIrJaR5MYZ2pryNU+ROiJRMwr9UAodwUwGLoBm2kJbEhRpWzNVxr6hieFada32zCgFvS37wHXITcDbto8UsuJGqArMCMo9MDQTGIquuVcJWiKnNegssrwh6fLjjjYKWbgDCNW9xGFQG6tmwgXFe20SZ3sQZVOgAqdZsG8gQoumF2nLeJaMir7QA2eg8eG/XU2Qfwdci4pLbfskx2NNBK74mUjyBXUBC4M437g4ItunV1JP/NdvlBW/zL7IYU1K99IjkV1kA9qghOoU1npcZibQPX8OWyuzFWLsvJY5ykgfIQR70/dBK/kye2LDcjHQKcX5lEjzPDGWSK+9zaQM35QlggMmCng8IwQvvdEtLK8Y+qWUZ0IMTsvLl2S91nQkAfE60o7cbXiuX2nP01JRu2N/LaDoNBXHbFJUiXJskLnYGSqVUqiwRJ4=
   app: indel-app
