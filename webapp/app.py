@@ -40,8 +40,9 @@ def encodeData(userData):
     # Cross reference sequence with headers list
         
     # Gets basepairs from original dataset to cross reference
-    pickle_in = open("data/headers.pickle","rb")
-    headers = pickle.load(pickle_in)
+    
+    with open("data/headers.pickle","rb") as pickle_in:
+        headers = pickle.load(pickle_in)
     
     # Encodes user input to match encoding of training data
     x = []
@@ -75,9 +76,17 @@ def create_figure(pred_percentage):
     # Create a new plot with a title and axis labels
     plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelihood')
     
+    # Scales plot for mobile size
+    plot.sizing_mode = "scale_width"
+    
     # Gets all possible outcomes from trained model
-    pickle_in = open("data/outcomes.pickle","rb")
-    mylist = pickle.load(pickle_in)
+    # Got warning on Travis CI "ResourceWarning: unclosed file <_io.BufferedReader name='data/headers.pickle'>"
+    # Therefore using with statments to auto close file after use
+    with open("data/outcomes.pickle","rb") as pickle_in:
+        mylist = pickle.load(pickle_in)
+    
+#    pickle_in = open("data/outcomes.pickle","rb")
+#    mylist = pickle.load(pickle_in)
     
     # Add a line renderer with legend and bar thickness
     plot.vbar(mylist, top=np.ravel(pred_percentage), legend="Percentage", width=0.9)
@@ -112,8 +121,8 @@ def predict():
         x = encodeData(userData)
         
         # Gets classification of indel from output dictionary of the trained model
-        pickle_in = open("data/dict.pickle","rb")
-        output_dict = pickle.load(pickle_in)
+        with open("data/dict.pickle","rb") as pickle_in:
+            output_dict = pickle.load(pickle_in)
         
         # Computational Graph
         with graph.as_default():

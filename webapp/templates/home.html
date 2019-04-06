@@ -64,6 +64,16 @@
     });
     </script>
     
+    <script>
+    $(function() {
+        $("#comment").keypress(function (e) {
+            if(e.which == 13) {
+                $('#userInput').submit();
+            };
+        });
+    });
+    </script>
+
 </head>
 
 <body>
@@ -123,7 +133,7 @@
             <div>
                 <p> This webapp will predict insertion/deletion spread of single strand DNA sequences using data provided by the Wellcome Sanger Institute. Currently limited to a 52 base sequence containing the <b>CRISPR</b> from bases 29 to 48 and the <b>PAM</b> from bases 49 to 51. Simply type or paste your sequence below and click Predict. You can test the server using <a id="sample" title="Click to paste sample" href="#predictions" onclick="printIt();">this sample sequence.</a></p>
             </div>
-            <form action="{{ url_for('predict')}}" method="post">
+            <form id="userInput" action="{{ url_for('predict')}}" method="post">
                 <p>Paste or type your <b>sequence</b> here: <a id="clear" href="#predictions" onclick="eraseText()">[clear]</a></p>
                 <textarea class="form-control" rows="1" cols="52" name="comment" maxlength="52" id="comment" ></textarea>
             <br/>

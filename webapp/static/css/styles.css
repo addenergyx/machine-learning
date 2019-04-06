@@ -67,8 +67,9 @@
 	border-radius: 15px 50px;
     background: #03A9F4;
     padding: 20px; 
-    width: 340px;
+    width: 360px;
     height: 200px;
+    margin: auto;
 }
 
 .center {
@@ -83,7 +84,7 @@ table {
 }
 
 th, td {
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid #ddd;
 }
 
@@ -95,7 +96,7 @@ tr:hover {background-color: #003366; color:white}
 }
 
 #predictions textarea {
-  width: 50%;
+  width: 60%;
 }
 
 /* For small screens like mobiles textarea will cover width of screen */
@@ -103,6 +104,11 @@ tr:hover {background-color: #003366; color:white}
   #predictions textarea {
     width: 100%;
   }
+}
+
+.col-centered{
+    float: none;
+    margin: 0 auto;
 }
 
 /* Default bootstrap footer styles */

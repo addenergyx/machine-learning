@@ -20,7 +20,7 @@
 </head>
 
 <body>
-    <section class="d-flex flex-column justify-content-start" data-aos="fade-up" data-aos-duration="700" data-aos-once="true" id="hero-2" style="width: 100%;height: 100vh;background-image: url(&quot;static/img/MSR-AI_Brain-Hero_sm.jpg&quot;);background-position: center;background-size: cover;background-repeat: no-repeat;">
+    <section class="d-flex flex-column justify-content-start" data-aos="fade-up" data-aos-duration="700" data-aos-once="true" id="hero-2" style="width: 100%;min-height: 100vh;background-image: url(&quot;static/img/MSR-AI_Brain-Hero_sm.jpg&quot;);background-position: center;background-size: cover;background-repeat: no-repeat;">
         <div id="results">
             <nav class="navbar navbar-light navbar-expand-md">
                 <div class="container-fluid">
@@ -52,31 +52,47 @@
                 </div>
             </div>
         </div>
-        <div style="padding-top: 20px;" id="flex">
-            <div class="results">
-                <table id="stats">
-                    <tr>
-                        <th>Insertion/Deletion<th>
-                        <th>Percent Likelihood<th>
-                    </tr>
+        <div style="padding-top: 20px;">
+            <div class="row">
+                <div class="col-md-4" style="padding-bottom: 30px;">
+                    <div class="results">
+                        <table id="stats">
+                            <tr>
+                                <th>Insertion/Deletion<th>
+                                <th>Percent Likelihood<th>
+                            </tr>
 
-                    {% for key, value in posts.items() %}
-                    <tr>    
-                        <td colspan="2">{{key}}</td>
-                        <td colspan="2">{{value}}%</td>
-                    </tr>
-                    {% endfor %}
+                            {% for key, value in posts.items() %}
+                            <tr>    
+                                <td colspan="2">{{key}}</td>
+                                <td colspan="2">{{value}}%</td>
+                            </tr>
+                            {% endfor %}
 
-                </table>
-            </div>
-        
-        
-            <div id="navigation" class="center" style="padding-left: 20px">
-                {{ script|safe }}
-                {{ div|safe }}
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    {{ script|safe }}
+                    {{ div|safe }}
+                </div>
+                
+                <div class="col-md-4"></div>
+
             </div>
         </div>
     </section>
+    <div class="footer-basic" style="background-color: #333333;">
+        <footer>
+            <div class="social">
+                <a href="https://github.com/addenergyx/machine-learning" target="_blank" style="background-color: #333333;"><i class="icon ion-social-github" style="color: #ffffff;"></i></a>
+                <a href="https://www.linkedin.com/in/david-adeniji-12a89776/?originalSubdomain=uk" target="_blank" style="background-color: #333333;"><i class="icon ion-social-linkedin" style="color: #ffffff;"></i></a></div>
+            <p class="copyright">2019 DAVID ADENIJ,&nbsp;<a href="mailto: ada121@student.anglia.ac.uk" style="color: #aaaaaa;"><span style="text-decoration: underline;">ADA121@STUDENT.ANGLIA.AC.UK</span><br></a></p>
+            <p class="copyright">SUPERVISOR: CRISTINA LUCA</p>
+        </footer>
+    </div>
+    
     
     <script src="static/js/jquery.min.js"></script>
     <script src="static/bootstrap/js/bootstrap.min.js"></script>
