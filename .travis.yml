@@ -10,4 +10,10 @@ install:
   - pip install -r webapp/requirements.txt
 
 script: 
-  - webapp/tests/test.py
+  - cd webapp
+  - python -m unittest discover
+
+deploy:
+  provider: heroku
+  api_key:
+    secure: c4541dd5-7e68-4a4d-b081-3446d7809673

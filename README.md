@@ -1,5 +1,7 @@
 # Machine Learning project for predicting insertion/deletion spread
 
+[![Build Status](https://travis-ci.com/addenergyx/machine-learning.svg?token=wy5brpF4p1m4f7GJqQcL&branch=master)](https://travis-ci.com/addenergyx/machine-learning)
+
 ## Overview
 
 This project uses machine learning to predict insertion/deletion spread of a given sequence from data provided by the Wellcome Sanger Institute. The deployed web application can be viewed [here.](https://indel-app.herokuapp.com/)
