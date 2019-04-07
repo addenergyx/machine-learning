@@ -13,7 +13,10 @@ import pickle # Used to get stored python objects from the trained classificatio
 
 # Initialises flask application
 app = Flask(__name__)
-app.secret_key = 'secret'
+
+# Used to access session id. http://flask.pocoo.org/docs/1.0/quickstart/#sessions
+# Needed for message flashing
+app.secret_key = b'\x19\xb7\x0c\x12z\x0b\x1a\xcd\xb4\xc7\x13\xaa\xd84R\x1e\xa0\x04\x8c\x02!\xdc\x8f%'
 
 # Home page
 @app.route('/', methods=['GET', 'POST'])
