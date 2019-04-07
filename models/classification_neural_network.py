@@ -36,12 +36,12 @@ home = expanduser("~")
 date = time.strftime("%d-%m-%y")
 
 #Command-Line Options and Argument Parsing
-config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.cn_config.yml'],
+config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/models/.cn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
 config.add_argument('-c','--cpu', action="store", type=int, default=-1, 
                     help="The number of CPUs to use to do the computation (default: -1 'all CPUs')")
-config.add_argument('--sample', action='store', default=home + '/machine-learning/csv/classification/classification_50bp_miseq26_merged_data.csv', 
+config.add_argument('--sample', action='store', default=home + '/machine-learning-data/merged_data/classification_52bp_miseq26_merged_data.csv', 
                     help="Data to train and test model created by data_preprocessing.pl (default: 'classification_50bp_miseq26_merged_data.csv') If using batch file must be encoded input data.")
 config.add_argument('-t','--tensorboard', nargs='?', const='{0}/machine-learning/tensorboard/classification/{1}_classification_tensorboard'.format(home, date), 
                     help="Creates a tensorboard of this model that can be accessed from your browser")
