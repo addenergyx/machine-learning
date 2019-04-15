@@ -37,7 +37,7 @@ home = expanduser("~")
 date = strftime("%d-%m-%y")
 
 #Command-Line Options and Argument Parsing
-config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/.nn_config.yml'],
+config = configargparse.ArgParser(default_config_files=[home + '/machine-learning/models/.nn_config.yml'],
                                   config_file_parser_class=configargparse.YAMLConfigFileParser)
 config.add_argument('--config', is_config_file=True, help='Configuration file path, command-line values override config file values')
 config.add_argument('-c','--cpu', action="store", type=int, default=-1, 
@@ -212,7 +212,7 @@ def visualisation(y_pred, Y_test, y_difference, filename='vis.html'):
     # output to static HTML file
     output_file(filename)
     # create a new plot with a title and axis labels
-    plot = figure(title="Difference between predicted results and actual results", x_axis_label='x', y_axis_label='y')
+    plot = figure(title="Difference between predicted results and actual results", x_axis_label='Observation', y_axis_label='Insertion/Deletion')
     # add a line renderer with legend and line thickness
     plot.line(range(len(y_difference)), np.ravel(y_difference), legend="Difference", line_width=2)
     # show the results
@@ -237,8 +237,8 @@ if saved_model is not None:
     y_difference = np.subtract(y_pred, Y_test)
 
     if multivariate:
-        visualisation(y_pred=y_pred[:,0].reshape(-1,1),Y_test=Y_test[:,0].reshape(-1,1), y_difference=y_difference[:,0].reshape(-1,1))
-        visualisation(y_pred=y_pred[:,1].reshape(-1,1),Y_test=Y_test[:,1].reshape(-1,1), y_difference=y_difference[:,1].reshape(-1,1))
+        visualisation(y_pred=y_pred[:,0].reshape(-1,1),Y_test=Y_test[:,0].reshape(-1,1), y_difference=y_difference[:,0].reshape(-1,1)) # Insertion
+        visualisation(y_pred=y_pred[:,1].reshape(-1,1),Y_test=Y_test[:,1].reshape(-1,1), y_difference=y_difference[:,1].reshape(-1,1)) # Deletion
     else:
         visualisation(y_pred,Y_test, y_difference)
 
@@ -523,7 +523,7 @@ if cp:
     print("\n----------\n")
     save_csv = input("Do you wish to save csv of data? ([Y]/N) ")
 
-    if save_csv.lower() is 'y' or 'yes':
+    if save_csv.lower() == 'y' or 'yes': # In python 3.6 use == instead of is
         default = '{0}/machine-learning/predictions/regression/{1}_miseq_predictions'.format(home, date)
         file_name = input('Type path and file name [Press enter to keep default: {0}]:'.format(default))
         frame.to_csv(file_name or default ,index=False)

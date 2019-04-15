@@ -13,9 +13,9 @@ cpu: -1
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
 #sample: ~/machine-learning/alleles_frequency_table_mv/multivariate_dataset_Miseq_020_S100_expQ331K_TDP_3_Alleles_frequency_table.txt 
-#sample: ~/machine-learning/merged_data/multivariate_20_merged_data.csv 
+sample: ~/machine-learning-data/merged_data/multivariate_20_merged_data.csv 
 #sample: ~/machine-learning/merged_data/Miseq_20-26_data.csv 
-sample: ~/machine-learning/csv/regression/Neural_network_Example_summary.csv
+#sample: ~/machine-learning-data/Neural_network_Example_summary.csv
 
 # Path to directory of the files for example '/machine-learning/smallsamplefiles/'
 # Use batch instead of 'sample' if you want to analyse multiple files in the same model
@@ -43,5 +43,5 @@ sample: ~/machine-learning/csv/regression/Neural_network_Example_summary.csv
 #tensorboard:
 
 # If the file contains two outputs (insertion and deletion are seperated) set to true
-#multivariate: True
+multivariate: True
 
