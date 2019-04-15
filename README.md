@@ -131,3 +131,8 @@ Other files:
 |merge_csv.pl|Merges several data files into one.|
 |static/css/styles.css|Styling for webapp.|
 
+## TODO
+* Tensorflow 2.0
+* Google Charts
+* Docker
+* Figure filters
