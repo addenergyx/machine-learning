@@ -99,6 +99,7 @@ python ~/machine-learning/classification_neural_network.py
 * [Bootstrap](https://getbootstrap.com/) - Free front-end framework for faster and easier web development.
 * [Scikit-learn](https://scikit-learn.org/stable/) - Used for data encoding and cross validation.
 * [Heroku](https://www.heroku.com/) - Cloud platform used to deploy the model.
+* [Flask](http://flask.pocoo.org/) - Python web framework.
 
 ## Description of files
 Python scripts files:
@@ -131,3 +132,8 @@ Other files:
 |merge_csv.pl|Merges several data files into one.|
 |static/css/styles.css|Styling for webapp.|
 
+## TODO
+* Tensorflow 2.0
+* Google Charts
+* Docker
+* Figure filters
