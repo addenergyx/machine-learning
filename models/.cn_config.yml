@@ -12,11 +12,12 @@ cpu: -1
 
 # File to be analysed (Default: Neural_network_Example_summary.csv)
 # Make sure the data preprocessing script has been run on the file beforehand
-sample: /home/ubu/machine-learning-data/merged_data/classification_52bp_miseq26_merged_data.csv
-#sample: /home/ubu/data/machine-learning-data/encoded_input.csv
+#sample: /home/ubu/machine-learning-data/merged_data/classification_52bp_miseq28_merged_data.csv
+#sample: /home/ubu/machine-learning-data/encoded_input.csv
+sample: /home/ubu/machine-learning-data/merged_data/miseq_classification_data.csv
 
 # File containing encoded output. Must be supplied when using batch flag. Input file goes with --sample
-#output: /home/ubu/data/machine-learning-data/encoded_output.csv
+#output: /home/ubu/machine-learning-data/encoded_output.csv
 
 # Batch mode
 # Use batch mode when data is too big to fit into memory, point --sample to encoded input file and --output to encoded output file
@@ -25,7 +26,7 @@ sample: /home/ubu/machine-learning-data/merged_data/classification_52bp_miseq26_
 #batch: 1 
 
 # Path to save model (Default: ~/machine-learning/snapshots/classification/{date}_trained_model.h5)
-#save: /home/ubu/data/machine-learning-data/machine-learning/snapshots/classification/full_classification_trained_model.h5
+#save: /home/ubu/machine-learning/models/snapshots/classification/full_classification_trained_model.h5
 
 # Prediction on a single observation
 # Must be in the same format and order as a csv produced by data_preprocessing.pl minus the aligned sequence

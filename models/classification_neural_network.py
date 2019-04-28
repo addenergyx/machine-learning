@@ -20,10 +20,10 @@ import subprocess
 #import matplotlib.pyplot as plt
 from bokeh.plotting import figure, output_file, show
 from keras.models import load_model
-from turicreate import SFrame #Currently no python3.7 support
+from turicreate import SFrame # Currently no python3.7 support
 import gc
 import csv
-import pickle #Module for saving Objects by serialization
+import pickle # Module for saving Objects by serialization
 
 '''
 Put modules at the top instead of within functions as the latter will make 
@@ -89,7 +89,7 @@ if batch is False:
               '13':'category','14':'category','15':'category','16':'category','17':'category','18':'category',
               '19':'category','20':'category','21':'category','22':'category','23':'category','24':'category',
               '25':'category','26':'category','ins/dels':'int'} 
-    dataset = pd.read_csv(sample, dtype=dtypes, error_bad_lines=False)
+    dataset = pd.read_csv(sample, dtype=dtypes, error_bad_lines=False) # Drops bad observations
     
     #y column
     # .iloc is purely integer-location based indexing for selection by position
@@ -329,31 +329,35 @@ else:
     results = cross_val_score(classifier, X_train, Y_train, cv=kfold, n_jobs=-1)
     print("Model: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
     '''
+    
     if batch is False:
         start = time.time()
         #def f():
         classifier.fit(X_train, Y_train, callbacks=switch_case_callbacks(x=True))
-        #   return
-        #mem_usage = memory_usage(f, max_usage=True)
-        #print('Maximum memory usage: %s' % max(mem_usage))
+        # return
+        # mem_usage = memory_usage(f, max_usage=True)
+        # print('Maximum memory usage: %s' % max(mem_usage))
         end = time.time()
         time_completion = (end - start) / 60
         print('Model completion time: {0:.2f} minutes'.format(time_completion))
     
     else:  
                 
-        #To get input and output dimensions for model
+        # To get input and output dimensions for model
         with open(sample,'rt') as x, open(encoded_output,'rt') as y:
+            waiting = animation.Wait(text="Retriving input and output dimensions for the model")
+            waiting.start()
             # Row count takes a while
-            row_count = sum(1 for row in open(sample))
+            row_count = sum(1 for row in open(sample)) # Needed for steps_per_epoch in fit.generator
             input_reader = csv.reader(x)
             output_reader = csv.reader(y)
             first_input = next(input_reader)
             first_output = next(output_reader)
             input_dim = len(first_input)
             y_categories = len(first_output)
+            waiting.stop()
         
-        #https://keras.io/models/sequential/#fit_generator
+        # https://keras.io/models/sequential/#fit_generator
         def generator(encoded_input,encoded_output):
             while True:
                 with open(encoded_input,'rt') as x, open(encoded_output,'rt') as y:
@@ -368,8 +372,11 @@ else:
                 
         model = build_classifier()
     
+        print('Training w/ Generator...')
         model.fit_generator(generator(encoded_input=sample, encoded_output=encoded_output),
-                            steps_per_epoch=row_count, epochs=1, callbacks=switch_case_callbacks(x=True))
+                            steps_per_epoch=row_count, epochs=1, callbacks=switch_case_callbacks(x=True), use_multiprocessing=True) 
+        # Based on research batch size intends to be in the power of 2 up to 512, given the size of the dataset (63 million rows)
+        # Choosen to go with the maximum recomended size. Could go higher but risk not converging        
                  
 
 #probability of different outcomes
@@ -537,14 +544,15 @@ if user_observation is not None:
 if path_to_tensorboard:
     subprocess.call(['tensorboard', '--logdir', path_to_tensorboard])
 
-#pickle used to save classification of data - movce to flask_train.py later
+#pickle used to save classification of data - for the webapp
 #file saved in same location as script running it
-pickle_out = open("dict.pickle","wb")
-pickle.dump(output_dict, pickle_out)
-pickle_out.close()
-pickle_out = open("headers.pickle","wb")
-pickle.dump(headers, pickle_out)
-pickle_out.close()
-pickle_out = open("outcomes.pickle","wb")
-pickle.dump(mylist, pickle_out)
-pickle_out.close()
+    
+#pickle_out = open("dict.pickle","wb")
+#pickle.dump(output_dict, pickle_out)
+#pickle_out.close()
+#pickle_out = open("headers.pickle","wb")
+#pickle.dump(headers, pickle_out)
+#pickle_out.close()
+#pickle_out = open("outcomes.pickle","wb")
+#pickle.dump(mylist, pickle_out)
+#pickle_out.close()
