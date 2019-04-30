@@ -141,7 +141,7 @@ def predict():
             # Results to be posted to webapp
             posts = {}
             for A, B in zip(user_top5, user_top5_prob):
-                B = [int(round(x)) for x in B ]
+                B = [float("%0.2f" % x) for x in B ]
                 posts = dict(zip(A, B))
                 
             # Likelihood of each possible outcome
