@@ -1,6 +1,6 @@
-bokeh==1.0.4
 Flask==1.1.4
 gunicorn==19.9.0
 Keras==2.10.0
-numpy==1.20
 tensorflow==2.5.0
+bokeh
+numpy
