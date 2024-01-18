@@ -3,7 +3,7 @@ astor==0.7.1
 bokeh==1.0.4
 certifi==2019.3.9
 Click==7.0
-Flask==1.0.2
+Flask==1.1.4
 gast==0.2.2
 gunicorn==19.9.0
 h5py==2.9.0
