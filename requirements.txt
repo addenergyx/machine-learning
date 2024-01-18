@@ -24,7 +24,6 @@ python-dateutil==2.8.0
 PyYAML==5.1
 scipy==1.2.1
 six==1.12.0
-tensorboard==2.10.0
 tensorflow==2.10.0
 tensorflow-estimator==2.10.0
 termcolor==1.1.0
