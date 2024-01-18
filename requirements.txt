@@ -1,6 +1,5 @@
 Flask==1.0.2
 gunicorn
-tensorflow==2.5.0
+tensorflow-cpu
 Keras
 bokeh
-numpy
