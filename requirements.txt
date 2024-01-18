@@ -5,7 +5,7 @@ Click==7.0
 Flask==1.1.4
 gast==0.2.2
 gunicorn==19.9.0
-h5py==2.9.0
+h5py
 itsdangerous==1.1.0
 Jinja2==2.10.1
 Keras==2.10.0
@@ -21,7 +21,7 @@ Pillow==5.4.1
 pyparsing==2.3.1
 python-dateutil==2.8.0
 PyYAML==5.1
-scipy==1.2.1
+scipy
 six==1.12.0
 tensorflow==2.10.0
 tensorflow-estimator==2.10.0
