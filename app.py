@@ -103,9 +103,6 @@ def predict():
         plot = create_figure(pred_percentage)
         script, div = components(plot)
 
-        show(plot)
-        print(div)
-
         return render_template('result.html', posts=posts, script=script, div=div)
 
 
