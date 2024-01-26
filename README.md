@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.com/addenergyx/machine-learning.svg?token=wy5brpF4p1m4f7GJqQcL&branch=master)](https://travis-ci.com/addenergyx/machine-learning)
 
+### Note: Migrated site from heroku to render
+
 ## Overview
 
 This project uses machine learning to predict insertion/deletion spread of a given sequence from data provided by the Wellcome Sanger Institute. The deployed web application can be viewed [here.](https://indel-app.herokuapp.com/) Application may take awhile to load as it is using a free dyno on heroku which sleeps after 30 minutes of inactivity.
