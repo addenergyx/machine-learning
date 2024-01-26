@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 from flask import Flask, render_template, request, redirect, url_for, flash
-from bokeh.plotting import figure, show
+from bokeh.plotting import figure
 from bokeh.models import HoverTool
 from bokeh.embed import components
 import pickle
@@ -16,13 +15,13 @@ app.secret_key = b'\x19\xb7\x0c\x12z\x0b\x1a\xcd\xb4\xc7\x13\xaa\xd84R\x1e\xa0\x
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
+    print(" * Model loaded!")
     return render_template('home.html')
 
 
 def get_model():
     global model
     model = load_model('data/flask_classification_trained_model.h5')
-    print(" * Model loaded!")
 
 
 def encodeData(userData):
@@ -61,6 +60,8 @@ def is_valid_DNA(dna):
 
 
 def create_figure(pred_percentage):
+    print(" * Creating fig...")
+
     plot = figure(title="Chance of given in/del occuring", x_axis_label='Insertion/Deletion', y_axis_label='Likelihood',
                   sizing_mode="scale_width", max_width=600 )
 
@@ -76,6 +77,9 @@ def create_figure(pred_percentage):
 @app.route("/predict", methods=['POST'])
 def predict():
     if request.method == 'POST':
+
+        print(" * Prediction...")
+
         userData = request.form['comment']
 
         if not is_valid_DNA(userData):
@@ -102,6 +106,8 @@ def predict():
 
         plot = create_figure(pred_percentage)
         script, div = components(plot)
+
+        print(" * Prediction done...")
 
         return render_template('result.html', posts=posts, script=script, div=div)
 
