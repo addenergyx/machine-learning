@@ -20,8 +20,7 @@ def home():
 
 
 def get_model():
-    global model
-    model = load_model('data/flask_classification_trained_model.h5')
+    return load_model('data/flask_classification_trained_model.h5')
 
 
 def encodeData(userData):
@@ -47,16 +46,8 @@ def map_func(val, dictionary):
     return dictionary[val] if val in dictionary else val
 
 
-vfunc = np.vectorize(map_func)
-
-print(" * Loading Keras model...")
-get_model()
-
-
 def is_valid_DNA(dna):
-    if len(set(dna.upper()) - {'A', 'C', 'G', 'T'}) != 0 or len(dna) != 52:
-        return False
-    return True
+    return len(set(dna.upper()) - {'A', 'C', 'G', 'T'}) == 0 and len(dna) == 52
 
 
 def create_figure(pred_percentage):
@@ -91,9 +82,11 @@ def predict():
         with open("data/dict.pickle", "rb") as pickle_in:
             output_dict = pickle.load(pickle_in)
 
-        user_proba = model.predict(np.array(x).reshape(1, -1))
+        print(" * Loading Keras model...")
+        user_proba = get_model().predict(np.array(x).reshape(1, -1))
         encoded_user_top5 = (-user_proba).argsort()[:, 0:5]
         user_top5_prob = np.sort(-user_proba)[:, 0:5] * -100
+        vfunc = np.vectorize(map_func)
         user_top5 = vfunc(encoded_user_top5, output_dict)
 
         posts = {}
