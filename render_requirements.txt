@@ -3,4 +3,3 @@ Flask==3.0.1
 gunicorn==21.2.0
 Keras==2.15.0
 tensorflow==2.15.0
-gevent
